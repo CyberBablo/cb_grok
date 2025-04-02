@@ -6,7 +6,7 @@ import (
 )
 
 // CalculateADX вычисляет ADX на основе массива свечей и заданного периода.
-func CalculateADX(candles []models.Candle, period int) []float64 {
+func CalculateADX(candles []models.OHLCV, period int) []float64 {
 	if len(candles) < period+1 {
 		return nil // Недостаточно данных для расчета
 	}

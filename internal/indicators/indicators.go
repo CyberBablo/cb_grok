@@ -5,7 +5,7 @@ import (
 	"github.com/cinar/indicator"
 )
 
-func CalculateSMA(candles []models.Candle, period int) []float64 {
+func CalculateSMA(candles []models.OHLCV, period int) []float64 {
 	closes := make([]float64, len(candles))
 	for i, c := range candles {
 		closes[i] = c.Close
@@ -14,7 +14,7 @@ func CalculateSMA(candles []models.Candle, period int) []float64 {
 	return sma
 }
 
-func CalculateEMA(candles []models.Candle, period int) []float64 {
+func CalculateEMA(candles []models.OHLCV, period int) []float64 {
 	closes := make([]float64, len(candles))
 	for i, c := range candles {
 		closes[i] = c.Close
@@ -23,7 +23,7 @@ func CalculateEMA(candles []models.Candle, period int) []float64 {
 	return ema
 }
 
-func CalculateRSI(candles []models.Candle, period int) []float64 {
+func CalculateRSI(candles []models.OHLCV, period int) []float64 {
 	closes := make([]float64, len(candles))
 	for i, c := range candles {
 		closes[i] = c.Close
@@ -32,7 +32,7 @@ func CalculateRSI(candles []models.Candle, period int) []float64 {
 	return rsi
 }
 
-func CalculateATR(candles []models.Candle, period int) []float64 {
+func CalculateATR(candles []models.OHLCV, period int) []float64 {
 	highs := make([]float64, len(candles))
 	lows := make([]float64, len(candles))
 	closes := make([]float64, len(candles))
