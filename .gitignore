@@ -7,6 +7,7 @@
 *.dll
 *.so
 *.dylib
+*.html
 
 # Test binary, built with `go test -c`
 *.test
@@ -27,4 +28,5 @@ go.work.sum
 .idea
 
 config/*.yml
+
 lib/
