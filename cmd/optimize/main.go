@@ -11,6 +11,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/c-bata/goptuna"
+	"github.com/c-bata/goptuna/tpe"
 	"github.com/samber/lo"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -76,6 +77,7 @@ func runOptimization(
 	study, err := goptuna.CreateStudy(
 		"strategy_1",
 		goptuna.StudyOptionDirection(goptuna.StudyDirectionMaximize),
+		goptuna.StudyOptionSampler(tpe.NewSampler()), // Используем TPESampler
 	)
 	if err != nil {
 		log.Error("optimize: create study", zap.Error(err))
@@ -83,43 +85,43 @@ func runOptimization(
 	}
 
 	objective := func(trial goptuna.Trial) (float64, error) {
-		maShortPeriod, err := trial.SuggestInt("ma_short_period", 5, 15)
+		maShortPeriod, err := trial.SuggestInt("ma_short_period", 5, 30)
 		if err != nil {
 			return 0, err
 		}
-		maLongPeriod, err := trial.SuggestInt("ma_long_period", 20, 50)
+		maLongPeriod, err := trial.SuggestInt("ma_long_period", 20, 100)
 		if err != nil {
 			return 0, err
 		}
-		rsiPeriod, err := trial.SuggestInt("rsi_period", 8, 16)
+		rsiPeriod, err := trial.SuggestInt("rsi_period", 5, 20)
 		if err != nil {
 			return 0, err
 		}
-		atrPeriod, err := trial.SuggestInt("atr_period", 8, 16)
+		atrPeriod, err := trial.SuggestInt("atr_period", 5, 20)
 		if err != nil {
 			return 0, err
 		}
-		buyRsiThreshold, err := trial.SuggestFloat("buy_rsi", 15, 35)
+		buyRsiThreshold, err := trial.SuggestFloat("buy_rsi", 10, 40)
 		if err != nil {
 			return 0, err
 		}
-		sellRsiThreshold, err := trial.SuggestFloat("sell_rsi", 65, 85)
+		sellRsiThreshold, err := trial.SuggestFloat("sell_rsi", 60, 90)
 		if err != nil {
 			return 0, err
 		}
-		stopLossMultiplier, err := trial.SuggestFloat("stop_loss_multiplier", 0.8, 2.0)
+		stopLossMultiplier, err := trial.SuggestFloat("stop_loss_multiplier", 0.5, 3.0)
 		if err != nil {
 			return 0, err
 		}
-		takeProfitMultiplier, err := trial.SuggestFloat("take_profit_multiplier", 1.5, 3.5)
+		takeProfitMultiplier, err := trial.SuggestFloat("take_profit_multiplier", 1.0, 5.0)
 		if err != nil {
 			return 0, err
 		}
-		emaShortPeriod, err := trial.SuggestInt("ema_short_period", 15, 40)
+		emaShortPeriod, err := trial.SuggestInt("ema_short_period", 10, 50)
 		if err != nil {
 			return 0, err
 		}
-		emaLongPeriod, err := trial.SuggestInt("ema_long_period", 80, 150)
+		emaLongPeriod, err := trial.SuggestInt("ema_long_period", 50, 200)
 		if err != nil {
 			return 0, err
 		}
@@ -131,7 +133,27 @@ func runOptimization(
 		if err != nil {
 			return 0, err
 		}
-		atrThreshold, err := trial.SuggestFloat("atr_threshold", 0.0, 1.0)
+		atrThreshold, err := trial.SuggestFloat("atr_threshold", 0.0, 2.0)
+		if err != nil {
+			return 0, err
+		}
+		adxPeriod, err := trial.SuggestInt("adx_period", 10, 30)
+		if err != nil {
+			return 0, err
+		}
+		adxThreshold, err := trial.SuggestFloat("adx_threshold", 20, 40)
+		if err != nil {
+			return 0, err
+		}
+		macdShortPeriod, err := trial.SuggestInt("macd_short_period", 5, 15)
+		if err != nil {
+			return 0, err
+		}
+		macdLongPeriod, err := trial.SuggestInt("macd_long_period", 20, 50)
+		if err != nil {
+			return 0, err
+		}
+		macdSignalPeriod, err := trial.SuggestInt("macd_signal_period", 5, 15)
 		if err != nil {
 			return 0, err
 		}
@@ -150,6 +172,11 @@ func runOptimization(
 			UseTrendFilter:       lo.If(useTrendFilter == "true", true).Else(false),
 			UseRSIFilter:         lo.If(useRsiFilter == "true", true).Else(false),
 			ATRThreshold:         atrThreshold,
+			ADXPeriod:            adxPeriod,
+			ADXThreshold:         adxThreshold,
+			MACDShortPeriod:      macdShortPeriod,
+			MACDLongPeriod:       macdLongPeriod,
+			MACDSignalPeriod:     macdSignalPeriod,
 		}
 
 		trainSharpe, _, _, trainMaxDD, trainWinRate, err := bt.Run(trainCandles, params)
@@ -160,7 +187,7 @@ func runOptimization(
 		valSharpe, _, _, valMaxDD, valWinRate, err := bt.Run(validationCandles, params)
 		if err != nil {
 			log.Warn("Failed to run backtest on validation set", zap.Error(err))
-			return trainSharpe, nil // Используем trainSharpe, если валидация не удалась
+			return trainSharpe, nil
 		}
 
 		combinedSharpe := (trainSharpe + valSharpe) / 2
@@ -176,8 +203,7 @@ func runOptimization(
 		return combinedSharpe, nil
 	}
 
-	// Параллельная оптимизация с 4 потоками
-	err = study.Optimize(objective, 5000)
+	err = study.Optimize(objective, 1000)
 	if err != nil {
 		log.Error("optimize: study optimize", zap.Error(err))
 		return err
@@ -208,6 +234,11 @@ func runOptimization(
 		UseTrendFilter:       bestParams["use_trend_filter"].(string) == "true",
 		UseRSIFilter:         bestParams["use_rsi_filter"].(string) == "true",
 		ATRThreshold:         bestParams["atr_threshold"].(float64),
+		ADXPeriod:            bestParams["adx_period"].(int),
+		ADXThreshold:         bestParams["adx_threshold"].(float64),
+		MACDShortPeriod:      bestParams["macd_short_period"].(int),
+		MACDLongPeriod:       bestParams["macd_long_period"].(int),
+		MACDSignalPeriod:     bestParams["macd_signal_period"].(int),
 	}
 
 	valSharpe, orders, capital, valMaxDD, valWinRate, err := bt.Run(validationCandles, bestStrategyParams)

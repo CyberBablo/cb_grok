@@ -22,11 +22,9 @@ type StrategyParams struct {
 	UseTrendFilter       bool
 	UseRSIFilter         bool
 	ATRThreshold         float64
-	MACDShort            int
-	MACDLong             int
-	MACDSignal           int
-	BollingerPeriod      int
-	BollingerStdDev      float64
-	UseMACDFilter        bool
-	UseBollingerFilter   bool
+	ADXPeriod            int
+	ADXThreshold         float64
+	MACDShortPeriod      int
+	MACDLongPeriod       int
+	MACDSignalPeriod     int
 }

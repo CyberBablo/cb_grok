@@ -12,8 +12,8 @@ func NewMovingAverageStrategy() Strategy {
 }
 
 func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyParams) []models.AppliedOHLCV {
-	if len(candles) < max(params.MALongPeriod, params.EMALongPeriod, 0) {
-		return nil // Недостаточно данных
+	if len(candles) < max(params.MALongPeriod, params.EMALongPeriod, params.MACDLongPeriod) {
+		return nil
 	}
 
 	shortMA := indicators.CalculateSMA(candles, params.MAShortPeriod)
@@ -22,11 +22,8 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 	atr := indicators.CalculateATR(candles, params.ATRPeriod)
 	emaShort := indicators.CalculateEMA(candles, params.EMAShortPeriod)
 	emaLong := indicators.CalculateEMA(candles, params.EMALongPeriod)
-
-	//var adx []float64
-	//if params.UseADXFilter {
-	//	adx = indicators.CalculateADX(candles, params.ADXPeriod)
-	//}
+	// adx := indicators.CalculateADX(candles, params.ADXPeriod) // Временно исключено
+	macd, macdSignal := indicators.CalculateMACD(candles, params.MACDShortPeriod, params.MACDLongPeriod, params.MACDSignalPeriod)
 
 	trend := make([]bool, len(candles))
 	volatility := make([]bool, len(candles))
@@ -47,22 +44,23 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 			LongEMA:    emaLong[i],
 			Trend:      trend[i],
 			Volatility: volatility[i],
+			// ADX:        adx[i], // Временно исключено
+			MACD:       macd[i],
+			MACDSignal: macdSignal[i],
 		})
 	}
 
 	for i := 1; i < len(appliedCandles); i++ {
-		buyCondition := shortMA[i] > longMA[i]
-		sellCondition := shortMA[i] < longMA[i]
+		// buyCondition := shortMA[i] > longMA[i] && macd[i] > macdSignal[i] && adx[i] > params.ADXThreshold
+		// sellCondition := shortMA[i] < longMA[i] && macd[i] < macdSignal[i] && adx[i] > params.ADXThreshold
+		// Временно исключаем ADX из условий
+		buyCondition := shortMA[i] > longMA[i] && macd[i] > macdSignal[i]
+		sellCondition := shortMA[i] < longMA[i] && macd[i] < macdSignal[i]
 
 		if params.UseRSIFilter {
 			buyCondition = buyCondition && rsi[i] < params.BuyRSIThreshold
 			sellCondition = sellCondition && rsi[i] > params.SellRSIThreshold
 		}
-
-		//if params.UseADXFilter && adx != nil {
-		//	buyCondition = buyCondition && adx[i] > params.ADXThreshold
-		//	sellCondition = sellCondition && adx[i] > params.ADXThreshold
-		//}
 
 		if params.UseTrendFilter {
 			buyCondition = buyCondition && trend[i] && volatility[i]
@@ -80,7 +78,6 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 		if i > 0 {
 			appliedCandles[i].Position = appliedCandles[i].Signal - appliedCandles[i-1].Signal
 		}
-
 	}
 
 	return appliedCandles

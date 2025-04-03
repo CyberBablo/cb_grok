@@ -1,18 +1,16 @@
 package models
 
 type OHLCV struct {
-	Timestamp int64
-	Open      float64
-	High      float64
-	Low       float64
-	Close     float64
-	Volume    float64
+	Timestamp int64   `json:"timestamp"`
+	Open      float64 `json:"open"`
+	High      float64 `json:"high"`
+	Low       float64 `json:"low"`
+	Close     float64 `json:"close"`
+	Volume    float64 `json:"volume"`
 }
 
 type AppliedOHLCV struct {
 	OHLCV
-	Signal     int // 1 - buy, -1 - sell, 0 - hold
-	Position   int // Изменение позиции
 	ATR        float64
 	RSI        float64
 	ShortMA    float64
@@ -21,4 +19,9 @@ type AppliedOHLCV struct {
 	LongEMA    float64
 	Trend      bool
 	Volatility bool
+	ADX        float64
+	MACD       float64
+	MACDSignal float64
+	Signal     int
+	Position   int
 }
