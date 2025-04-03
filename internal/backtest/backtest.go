@@ -18,7 +18,7 @@ type Order struct {
 
 // Backtest определяет интерфейс бэктеста
 type Backtest interface {
-	Run(candles []models.OHLCV, params strategy.StrategyParams) (float64, []Order, error)
+	Run(candles []models.OHLCV, params strategy.StrategyParams) (sharpeRatio float64, orders []Order, finalCapital float64, maxDrawdown float64, winRate float64, err error)
 }
 
 // backtestImpl реализует логику бэктеста
@@ -44,16 +44,16 @@ func NewBacktest() Backtest {
 }
 
 // Run выполняет бэктест
-func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams) (float64, []Order, error) {
-	str := strategy.NewStrategy()
+func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams) (float64, []Order, float64, float64, float64, error) {
+	str := strategy.NewMovingAverageStrategy()
 	candles := str.Apply(ohlcv, params)
 	if candles == nil {
-		return 0, nil, nil
+		return 0, nil, b.InitialCapital, 0, 0, nil
 	}
 
 	for _, c := range candles {
 		if c.ATR == 0 {
-			return 0, nil, fmt.Errorf("ATR is required for backtest")
+			return 0, nil, b.InitialCapital, 0, 0, fmt.Errorf("ATR is required for backtest")
 		}
 	}
 
@@ -91,8 +91,8 @@ func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams)
 			position = capital / buyPrice * (1 - b.Commission)
 			capital = 0
 			entryPrice = buyPrice
-			stopLoss = entryPrice - atr*b.StopLossMultiplier
-			takeProfit = entryPrice + atr*b.TakeProfitMultiplier
+			stopLoss = entryPrice - atr*params.StopLossMultiplier
+			takeProfit = entryPrice + atr*params.TakeProfitMultiplier
 			orders = append(orders, Order{Action: "buy", Amount: position, Price: buyPrice, Timestamp: timestamp})
 		} else if signal == -1 && position > 0 {
 			sellPrice := nextOpen * (1 - b.SlippagePercent - b.Spread)
@@ -108,11 +108,9 @@ func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams)
 		lastPrice := candles[len(candles)-1].Close * (1 - b.SlippagePercent - b.Spread)
 		capital = position * lastPrice * (1 - b.Commission)
 		orders = append(orders, Order{Action: "sell", Amount: position, Price: lastPrice, Timestamp: candles[len(candles)-1].Timestamp, Reason: "end_of_backtest"})
-		position = 0
 	}
 
 	portfolioValues[len(candles)-1] = capital
-	//finalValue := capital
 
 	if len(portfolioValues) > 1 {
 		returns := make([]float64, len(portfolioValues)-1)
@@ -138,6 +136,7 @@ func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams)
 			sharpeRatio = meanReturn / stdDev * math.Sqrt(252) // Годовой Sharpe Ratio
 		}
 
+		// Расчет Max Drawdown
 		maxDrawdown := 0.0
 		peak := portfolioValues[0]
 		for _, value := range portfolioValues {
@@ -150,8 +149,23 @@ func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams)
 			}
 		}
 
-		return sharpeRatio, orders, nil
+		// Расчет Win Rate
+		var wins, totalTrades int
+		for i := 0; i < len(orders)-1; i += 2 {
+			if orders[i].Action == "buy" && orders[i+1].Action == "sell" {
+				if orders[i+1].Price > orders[i].Price {
+					wins++
+				}
+				totalTrades++
+			}
+		}
+		winRate := 0.0
+		if totalTrades > 0 {
+			winRate = float64(wins) / float64(totalTrades) * 100
+		}
+
+		return sharpeRatio, orders, capital, maxDrawdown, winRate, nil
 	}
 
-	return 0, orders, nil
+	return 0, orders, capital, 0, 0, nil
 }

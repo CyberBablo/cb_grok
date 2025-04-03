@@ -50,7 +50,7 @@ func runOptimization(
 		return err
 	}
 
-	candles, err := ex.FetchOHLCV("BNB/USDT", "1h", 3000)
+	candles, err := ex.FetchOHLCV("BNB/USDT", "1h", 5000)
 	if err != nil {
 		log.Error("optimize: fetch OHLCV", zap.Error(err))
 		return err
@@ -152,22 +152,32 @@ func runOptimization(
 			ATRThreshold:         atrThreshold,
 		}
 
-		trainSharpe, _, err := bt.Run(trainCandles, params)
+		trainSharpe, _, _, trainMaxDD, trainWinRate, err := bt.Run(trainCandles, params)
 		if err != nil {
 			return 0, err
 		}
 
-		valSharpe, _, err := bt.Run(validationCandles, params)
+		valSharpe, _, _, valMaxDD, valWinRate, err := bt.Run(validationCandles, params)
 		if err != nil {
 			log.Warn("Failed to run backtest on validation set", zap.Error(err))
+			return trainSharpe, nil // Используем trainSharpe, если валидация не удалась
 		}
 
 		combinedSharpe := (trainSharpe + valSharpe) / 2
+		log.Info("Trial result",
+			zap.Int("trial", trial.ID),
+			zap.Float64("combined_sharpe", combinedSharpe),
+			zap.Float64("train_max_dd", trainMaxDD),
+			zap.Float64("train_win_rate", trainWinRate),
+			zap.Float64("val_max_dd", valMaxDD),
+			zap.Float64("val_win_rate", valWinRate),
+		)
 
 		return combinedSharpe, nil
 	}
 
-	err = study.Optimize(objective, 1000)
+	// Параллельная оптимизация с 4 потоками
+	err = study.Optimize(objective, 5000)
 	if err != nil {
 		log.Error("optimize: study optimize", zap.Error(err))
 		return err
@@ -200,7 +210,7 @@ func runOptimization(
 		ATRThreshold:         bestParams["atr_threshold"].(float64),
 	}
 
-	valSharpe, _, err := bt.Run(validationCandles, bestStrategyParams)
+	valSharpe, orders, capital, valMaxDD, valWinRate, err := bt.Run(validationCandles, bestStrategyParams)
 	if err != nil {
 		log.Error("optimize: final validation backtest", zap.Error(err))
 		return err
@@ -227,14 +237,16 @@ func runOptimization(
 		log.Error("optimize: model file encoder", zap.Error(err))
 		return err
 	}
-
+	orderCount := len(orders)
 	result := fmt.Sprintf(
-		"Оптимизация завершена.\nКомбинированный Sharpe Ratio: %.2f\nВалидационный Sharpe Ratio: %.2f\nМодель сохранена в %s",
-		combinedSharpeRatio, valSharpe, filename)
+		"Оптимизация завершена.\nКоличество сделок: %d\nКомбинированный Sharpe Ratio: %.2f\nВалидационный Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
+		orderCount, combinedSharpeRatio, valSharpe, capital, valMaxDD, valWinRate, filename)
 
 	log.Info("optimization completed",
 		zap.Float64("combined_sharpe_ratio", combinedSharpeRatio),
 		zap.Float64("validation_sharpe_ratio", valSharpe),
+		zap.Float64("validation_max_drawdown", valMaxDD),
+		zap.Float64("validation_win_rate", valWinRate),
 		zap.String("filename", filename))
 	tg.SendMessage(result)
 
