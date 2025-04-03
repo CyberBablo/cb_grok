@@ -11,7 +11,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/c-bata/goptuna"
-	"github.com/c-bata/goptuna/tpe"
 	"github.com/samber/lo"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -51,7 +50,7 @@ func runOptimization(
 		return err
 	}
 
-	candles, err := ex.FetchOHLCV("BNB/USDT", "1h", 5000)
+	candles, err := ex.FetchOHLCV("BNB/USDT", "30m", 10000)
 	if err != nil {
 		log.Error("optimize: fetch OHLCV", zap.Error(err))
 		return err
@@ -59,7 +58,7 @@ func runOptimization(
 
 	log.Info("optimize: OHLCV data", zap.Int("length", len(candles)))
 
-	candlesPerDay := 24
+	candlesPerDay := 48
 	validationCandlesCount := validationSetDays * candlesPerDay
 
 	if validationCandlesCount >= len(candles) {
@@ -77,7 +76,6 @@ func runOptimization(
 	study, err := goptuna.CreateStudy(
 		"strategy_1",
 		goptuna.StudyOptionDirection(goptuna.StudyDirectionMaximize),
-		goptuna.StudyOptionSampler(tpe.NewSampler()), // Используем TPESampler
 	)
 	if err != nil {
 		log.Error("optimize: create study", zap.Error(err))
@@ -191,6 +189,7 @@ func runOptimization(
 		}
 
 		combinedSharpe := (trainSharpe + valSharpe) / 2
+		//combinedSharpe = combinedSharpe * valWinRate / 100
 		log.Info("Trial result",
 			zap.Int("trial", trial.ID),
 			zap.Float64("combined_sharpe", combinedSharpe),
