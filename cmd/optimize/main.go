@@ -34,6 +34,7 @@ func runOptimization(
 	log *zap.Logger,
 	bt backtest.Backtest,
 	tg *telegram.TelegramService,
+	cfg config.Config,
 ) error {
 	var validationSetDays int
 	flag.IntVar(&validationSetDays, "val-set-days", 0, "Number of days for validation set")
@@ -44,7 +45,7 @@ func runOptimization(
 		return fmt.Errorf("validation days must be greater than 0")
 	}
 
-	ex, err := exchange.NewBinance(false, "", "")
+	ex, err := exchange.NewBinance(false, cfg.Binance.ApuPublic, cfg.Binance.ApiSecret, cfg.Binance.ProxyUrl)
 	if err != nil {
 		log.Error("optimize: initialize Bybit exchange", zap.Error(err))
 		return err

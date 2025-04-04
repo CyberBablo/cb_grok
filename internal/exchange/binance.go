@@ -15,10 +15,11 @@ type binanceImpl struct {
 	log *zap.Logger
 }
 
-func NewBinance(isDemo bool, apiKey, apiSecret string) (Exchange, error) {
+func NewBinance(isDemo bool, apiKey, apiSecret string, proxyUrl string) (Exchange, error) {
 	ex := ccxt.NewBinance(map[string]interface{}{
-		"apiKey": apiKey,
-		"secret": apiSecret,
+		"apiKey":   apiKey,
+		"secret":   apiSecret,
+		"proxyUrl": proxyUrl,
 	})
 	if isDemo {
 		ex.SetSandboxMode(true)
