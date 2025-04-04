@@ -13,7 +13,7 @@ import (
 func main() {
 	log := logger.NewLogger()
 
-	ex, err := exchange.NewBybit(false, "", "")
+	ex, err := exchange.NewBinance(false, "", "")
 	if err != nil {
 		log.Error("optimize: initialize Bybit exchange", zap.Error(err))
 		return

@@ -10,23 +10,23 @@ import (
 	"sort"
 )
 
-type bybitImpl struct {
-	ex  ccxt.Bybit
+type binanceImpl struct {
+	ex  ccxt.Binance
 	log *zap.Logger
 }
 
-func NewBybit(isDemo bool, apiKey, apiSecret string) (Exchange, error) {
-	ex := ccxt.NewBybit(map[string]interface{}{
+func NewBinance(isDemo bool, apiKey, apiSecret string) (Exchange, error) {
+	ex := ccxt.NewBinance(map[string]interface{}{
 		"apiKey": apiKey,
 		"secret": apiSecret,
 	})
 	if isDemo {
 		ex.SetSandboxMode(true)
 	}
-	return &bybitImpl{ex: ex, log: logger.GetInstance()}, nil
+	return &binanceImpl{ex: ex, log: logger.GetInstance()}, nil
 }
 
-func (e *bybitImpl) FetchOHLCV(symbol string, timeframe string, total int) ([]models.OHLCV, error) {
+func (e *binanceImpl) FetchOHLCV(symbol string, timeframe string, total int) ([]models.OHLCV, error) {
 	limit := 1000
 
 	var candles []models.OHLCV
