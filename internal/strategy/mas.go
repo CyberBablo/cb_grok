@@ -18,17 +18,17 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 
 	lookbackPeriod := 20
 	regime := DetectMarketRegime(candles, lookbackPeriod)
-	
+
 	adjustedParams := params
 	switch regime {
 	case TrendingMarket:
 		adjustedParams.TakeProfitMultiplier *= 1.1 // Slightly increase take profit
-		adjustedParams.ADXThreshold *= 0.9        // Slightly lower ADX threshold
+		adjustedParams.ADXThreshold *= 0.9         // Slightly lower ADX threshold
 	case VolatileMarket:
-		adjustedParams.StopLossMultiplier *= 0.9  // Tighter stop loss
-		adjustedParams.UseRSIFilter = true        // Enable RSI filter
+		adjustedParams.StopLossMultiplier *= 0.9 // Tighter stop loss
+		adjustedParams.UseRSIFilter = true       // Enable RSI filter
 	case RangeMarket:
-		adjustedParams.UseRSIFilter = true        // Enable RSI filter
+		adjustedParams.UseRSIFilter = true // Enable RSI filter
 	}
 
 	shortMA := indicators.CalculateSMA(candles, adjustedParams.MAShortPeriod)
@@ -37,9 +37,9 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 	atr := indicators.CalculateATR(candles, adjustedParams.ATRPeriod)
 	emaShort := indicators.CalculateEMA(candles, adjustedParams.EMAShortPeriod)
 	emaLong := indicators.CalculateEMA(candles, adjustedParams.EMALongPeriod)
-	
+
 	adx := indicators.CalculateADX(candles, adjustedParams.ADXPeriod)
-	
+
 	macd, macdSignal := indicators.CalculateMACD(candles, adjustedParams.MACDShortPeriod, adjustedParams.MACDLongPeriod, adjustedParams.MACDSignalPeriod)
 
 	trend := make([]bool, len(candles))
@@ -70,18 +70,18 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 	for i := 1; i < len(appliedCandles); i++ {
 		buyCondition := shortMA[i] > longMA[i] && macd[i] > macdSignal[i]
 		sellCondition := shortMA[i] < longMA[i] && macd[i] < macdSignal[i]
-		
+
 		if adx[i] > 25.0 && trend[i] {
 			buyCondition = buyCondition && true
 		} else if adx[i] > 25.0 && !trend[i] {
 			sellCondition = sellCondition && true
 		}
-		
+
 		if adjustedParams.UseRSIFilter {
 			buyCondition = buyCondition && rsi[i] < adjustedParams.BuyRSIThreshold
 			sellCondition = sellCondition && rsi[i] > adjustedParams.SellRSIThreshold
 		}
-		
+
 		if adjustedParams.UseTrendFilter {
 			buyCondition = buyCondition && trend[i] && volatility[i]
 			sellCondition = sellCondition && !trend[i] && volatility[i]
@@ -117,13 +117,13 @@ func DetectMarketRegime(candles []models.OHLCV, lookbackPeriod int) MarketRegime
 	}
 
 	recentCandles := candles[len(candles)-lookbackPeriod:]
-	
+
 	adx := indicators.CalculateADX(recentCandles, 20) // Use optimized ADX period
-	
+
 	atr := indicators.CalculateATR(recentCandles, 16) // Use optimized ATR period
-	
+
 	latestADX := adx[len(adx)-1]
-	
+
 	avgATRPercentage := 0.0
 	count := 0
 	for i := len(recentCandles) - 5; i < len(recentCandles); i++ {
@@ -135,10 +135,10 @@ func DetectMarketRegime(candles []models.OHLCV, lookbackPeriod int) MarketRegime
 	if count > 0 {
 		avgATRPercentage /= float64(count)
 	}
-	
-	adxThreshold := 20.0 // Lower threshold to detect more trends
+
+	adxThreshold := 20.0  // Lower threshold to detect more trends
 	atrThreshold := 0.005 // 0.5% normalized for better volatility detection
-	
+
 	if latestADX > adxThreshold {
 		return TrendingMarket // Strong trend detected
 	} else if avgATRPercentage > atrThreshold {

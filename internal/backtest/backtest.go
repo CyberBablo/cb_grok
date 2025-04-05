@@ -88,14 +88,14 @@ func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams)
 
 		if signal == 1 && capital > 0 {
 			buyPrice := nextOpen * (1 + b.SlippagePercent + b.Spread)
-			
+
 			isVolatile := false
 			isTrending := false
-			
+
 			if i >= 20 && candles[i].ADX > 20.0 {
 				isTrending = true
 			}
-			
+
 			volatilityFactor := 1.0
 			if i >= 5 {
 				recentATR := 0.0
@@ -103,41 +103,41 @@ func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams)
 					recentATR += candles[i-j].ATR
 				}
 				recentATR /= 5.0
-				
-				if candles[i].ATR > recentATR * 1.2 {
+
+				if candles[i].ATR > recentATR*1.2 {
 					isVolatile = true
-					volatilityFactor = 0.7  // Reduce risk in volatile markets
-				} else if candles[i].ATR < recentATR * 0.8 {
-					volatilityFactor = 1.3  // Increase risk in low volatility
+					volatilityFactor = 0.7 // Reduce risk in volatile markets
+				} else if candles[i].ATR < recentATR*0.8 {
+					volatilityFactor = 1.3 // Increase risk in low volatility
 				}
 			}
-			
+
 			var riskPercentage float64
 			if isTrending {
-				riskPercentage = 0.03  // Higher risk in trending markets
+				riskPercentage = 0.03 // Higher risk in trending markets
 			} else if isVolatile {
-				riskPercentage = 0.02  // Lower risk in volatile markets
+				riskPercentage = 0.02 // Lower risk in volatile markets
 			} else {
 				riskPercentage = 0.025 // Default risk
 			}
-			
+
 			riskAmount := capital * riskPercentage * volatilityFactor
 			stopLossDistance := atr * params.StopLossMultiplier
-			
+
 			var positionSize float64
 			if stopLossDistance > 0 {
 				positionSize = riskAmount / stopLossDistance
 			} else {
 				positionSize = capital / buyPrice * 0.5 // Default to 50% if can't calculate
 			}
-			
+
 			maxPositionSize := capital / buyPrice * (1 - b.Commission)
-			if positionSize > maxPositionSize * 0.8 {
+			if positionSize > maxPositionSize*0.8 {
 				positionSize = maxPositionSize * 0.8 // Cap at 80% of available capital
-			} else if positionSize < maxPositionSize * 0.15 {
+			} else if positionSize < maxPositionSize*0.15 {
 				positionSize = maxPositionSize * 0.15 // Minimum 15% of available capital
 			}
-			
+
 			position = positionSize
 			capital = capital - (position * buyPrice)
 			entryPrice = buyPrice
