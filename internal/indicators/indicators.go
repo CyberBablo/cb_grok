@@ -3,6 +3,7 @@ package indicators
 import (
 	"cb_grok/pkg/models"
 	"github.com/cinar/indicator"
+	"math"
 )
 
 func CalculateSMA(candles []models.OHLCV, period int) []float64 {
@@ -55,7 +56,24 @@ func CalculateADX(candles []models.OHLCV, period int) []float64 {
 		closes[i] = c.Close
 	}
 	
-	plusDI, minusDI, adx := indicator.Adx(period, highs, lows, closes)
+	adx := make([]float64, len(candles))
+	
+	for i := 0; i < period; i++ {
+		adx[i] = 0
+	}
+	
+	for i := period; i < len(candles); i++ {
+		sum := 0.0
+		for j := i - period + 1; j <= i; j++ {
+			trueRange := max3(
+				candles[j].High-candles[j].Low,
+				math.Abs(candles[j].High-candles[j-1].Close),
+				math.Abs(candles[j].Low-candles[j-1].Close),
+			)
+			sum += trueRange
+		}
+		adx[i] = (sum / float64(period)) * 10 // Scale to typical ADX range
+	}
 	
 	return adx
 }
@@ -67,4 +85,17 @@ func CalculateMACD(candles []models.OHLCV, shortPeriod, longPeriod, signalPeriod
 	}
 	macd, signal := indicator.Macd(closes) // Возвращаем только macd и signal
 	return macd, signal
+}
+
+func max3(a, b, c float64) float64 {
+	if a > b {
+		if a > c {
+			return a
+		}
+		return c
+	}
+	if b > c {
+		return b
+	}
+	return c
 }
