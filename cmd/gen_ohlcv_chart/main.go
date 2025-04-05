@@ -63,5 +63,8 @@ func main() {
 		UseRepoAssets() // serving assets file from current repo, avoid network access
 
 	c := tachart.New(*cfg)
-	c.GenStatic(chartCandles, events, "kline.html")
+	err = c.GenStatic(chartCandles, events, "kline.html")
+	if err != nil {
+		panic(err)
+	}
 }
