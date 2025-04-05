@@ -89,6 +89,13 @@ func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams)
 		if signal == 1 && capital > 0 {
 			buyPrice := nextOpen * (1 + b.SlippagePercent + b.Spread)
 			
+			isVolatile := false
+			isTrending := false
+			
+			if i >= 20 && candles[i].ADX > 20.0 {
+				isTrending = true
+			}
+			
 			volatilityFactor := 1.0
 			if i >= 5 {
 				recentATR := 0.0
@@ -98,13 +105,23 @@ func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams)
 				recentATR /= 5.0
 				
 				if candles[i].ATR > recentATR * 1.2 {
-					volatilityFactor = 0.8
+					isVolatile = true
+					volatilityFactor = 0.7  // Reduce risk in volatile markets
 				} else if candles[i].ATR < recentATR * 0.8 {
-					volatilityFactor = 1.2
+					volatilityFactor = 1.3  // Increase risk in low volatility
 				}
 			}
 			
-			riskAmount := capital * 0.025 * volatilityFactor
+			var riskPercentage float64
+			if isTrending {
+				riskPercentage = 0.03  // Higher risk in trending markets
+			} else if isVolatile {
+				riskPercentage = 0.02  // Lower risk in volatile markets
+			} else {
+				riskPercentage = 0.025 // Default risk
+			}
+			
+			riskAmount := capital * riskPercentage * volatilityFactor
 			stopLossDistance := atr * params.StopLossMultiplier
 			
 			var positionSize float64
