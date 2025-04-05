@@ -17,9 +17,9 @@ type binanceImpl struct {
 
 func NewBinance(isDemo bool, apiKey, apiSecret string, proxyUrl string) (Exchange, error) {
 	ex := ccxt.NewBinance(map[string]interface{}{
-		"apiKey":   apiKey,
-		"secret":   apiSecret,
-		"proxyUrl": proxyUrl,
+		"apiKey":    apiKey,
+		"secret":    apiSecret,
+		"httpProxy": proxyUrl,
 	})
 	if isDemo {
 		ex.SetSandboxMode(true)
