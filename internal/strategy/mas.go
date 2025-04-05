@@ -71,11 +71,10 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 		buyCondition := shortMA[i] > longMA[i] && macd[i] > macdSignal[i]
 		sellCondition := shortMA[i] < longMA[i] && macd[i] < macdSignal[i]
 		
-		if adx[i] > 15.0 {
-			buyCondition = buyCondition && trend[i]
-		} else {
-			buyCondition = buyCondition && rsi[i] < 40
-			sellCondition = sellCondition && rsi[i] > 60
+		if adx[i] > 25.0 && trend[i] {
+			buyCondition = buyCondition && true
+		} else if adx[i] > 25.0 && !trend[i] {
+			sellCondition = sellCondition && true
 		}
 		
 		if adjustedParams.UseRSIFilter {
