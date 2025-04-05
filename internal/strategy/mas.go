@@ -3,7 +3,6 @@ package strategy
 import (
 	"cb_grok/internal/indicators"
 	"cb_grok/pkg/models"
-	"math"
 )
 
 type MovingAverageStrategy struct{}
@@ -120,7 +119,6 @@ func DetectMarketRegime(candles []models.OHLCV, lookbackPeriod int) MarketRegime
 	atr := indicators.CalculateATR(recentCandles, 16) // Use optimized ATR period
 	
 	latestADX := adx[len(adx)-1]
-	latestRSI := rsi[len(rsi)-1]
 	
 	avgATRPercentage := 0.0
 	count := 0
