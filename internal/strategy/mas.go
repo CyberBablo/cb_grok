@@ -3,6 +3,7 @@ package strategy
 import (
 	"cb_grok/internal/indicators"
 	"cb_grok/pkg/models"
+	"math"
 )
 
 type MovingAverageStrategy struct{}
@@ -16,20 +17,37 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 		return nil
 	}
 
-	shortMA := indicators.CalculateSMA(candles, params.MAShortPeriod)
-	longMA := indicators.CalculateSMA(candles, params.MALongPeriod)
-	rsi := indicators.CalculateRSI(candles, params.RSIPeriod)
-	atr := indicators.CalculateATR(candles, params.ATRPeriod)
-	emaShort := indicators.CalculateEMA(candles, params.EMAShortPeriod)
-	emaLong := indicators.CalculateEMA(candles, params.EMALongPeriod)
-	// adx := indicators.CalculateADX(candles, params.ADXPeriod) // Временно исключено
-	macd, macdSignal := indicators.CalculateMACD(candles, params.MACDShortPeriod, params.MACDLongPeriod, params.MACDSignalPeriod)
+	lookbackPeriod := 20
+	regime := DetectMarketRegime(candles, lookbackPeriod)
+	
+	adjustedParams := params
+	switch regime {
+	case TrendingMarket:
+		adjustedParams.UseTrendFilter = true
+		adjustedParams.TakeProfitMultiplier *= 1.2
+	case VolatileMarket:
+		adjustedParams.StopLossMultiplier *= 0.8
+		adjustedParams.TakeProfitMultiplier *= 0.8
+		adjustedParams.UseRSIFilter = true
+	case RangeMarket:
+		adjustedParams.UseRSIFilter = true
+		adjustedParams.TakeProfitMultiplier *= 0.9
+	}
+
+	shortMA := indicators.CalculateSMA(candles, adjustedParams.MAShortPeriod)
+	longMA := indicators.CalculateSMA(candles, adjustedParams.MALongPeriod)
+	rsi := indicators.CalculateRSI(candles, adjustedParams.RSIPeriod)
+	atr := indicators.CalculateATR(candles, adjustedParams.ATRPeriod)
+	emaShort := indicators.CalculateEMA(candles, adjustedParams.EMAShortPeriod)
+	emaLong := indicators.CalculateEMA(candles, adjustedParams.EMALongPeriod)
+	adx := indicators.CalculateADX(candles, adjustedParams.ADXPeriod)
+	macd, macdSignal := indicators.CalculateMACD(candles, adjustedParams.MACDShortPeriod, adjustedParams.MACDLongPeriod, adjustedParams.MACDSignalPeriod)
 
 	trend := make([]bool, len(candles))
 	volatility := make([]bool, len(candles))
 	for i := range candles {
 		trend[i] = emaShort[i] > emaLong[i]
-		volatility[i] = atr[i] > params.ATRThreshold
+		volatility[i] = atr[i] > adjustedParams.ATRThreshold
 	}
 
 	var appliedCandles []models.AppliedOHLCV
@@ -44,25 +62,22 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 			LongEMA:    emaLong[i],
 			Trend:      trend[i],
 			Volatility: volatility[i],
-			// ADX:        adx[i], // Временно исключено
+			ADX:        adx[i],
 			MACD:       macd[i],
 			MACDSignal: macdSignal[i],
 		})
 	}
 
 	for i := 1; i < len(appliedCandles); i++ {
-		// buyCondition := shortMA[i] > longMA[i] && macd[i] > macdSignal[i] && adx[i] > params.ADXThreshold
-		// sellCondition := shortMA[i] < longMA[i] && macd[i] < macdSignal[i] && adx[i] > params.ADXThreshold
-		// Временно исключаем ADX из условий
-		buyCondition := shortMA[i] > longMA[i] && macd[i] > macdSignal[i]
-		sellCondition := shortMA[i] < longMA[i] && macd[i] < macdSignal[i]
+		buyCondition := shortMA[i] > longMA[i] && macd[i] > macdSignal[i] && adx[i] > adjustedParams.ADXThreshold
+		sellCondition := shortMA[i] < longMA[i] && macd[i] < macdSignal[i] && adx[i] > adjustedParams.ADXThreshold
 
-		if params.UseRSIFilter {
-			buyCondition = buyCondition && rsi[i] < params.BuyRSIThreshold
-			sellCondition = sellCondition && rsi[i] > params.SellRSIThreshold
+		if adjustedParams.UseRSIFilter {
+			buyCondition = buyCondition && rsi[i] < adjustedParams.BuyRSIThreshold
+			sellCondition = sellCondition && rsi[i] > adjustedParams.SellRSIThreshold
 		}
 
-		if params.UseTrendFilter {
+		if adjustedParams.UseTrendFilter {
 			buyCondition = buyCondition && trend[i] && volatility[i]
 			sellCondition = sellCondition && !trend[i] && volatility[i]
 		}
@@ -81,6 +96,72 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 	}
 
 	return appliedCandles
+}
+
+type MarketRegime int
+
+const (
+	RangeMarket MarketRegime = iota
+	TrendingMarket
+	VolatileMarket
+)
+
+func DetectMarketRegime(candles []models.OHLCV, lookbackPeriod int) MarketRegime {
+	if len(candles) < lookbackPeriod {
+		return RangeMarket // Default to range market if not enough data
+	}
+
+	recentCandles := candles[len(candles)-lookbackPeriod:]
+	
+	returns := make([]float64, lookbackPeriod-1)
+	for i := 1; i < lookbackPeriod; i++ {
+		returns[i-1] = (recentCandles[i].Close - recentCandles[i-1].Close) / recentCandles[i-1].Close
+	}
+	
+	meanReturn := 0.0
+	for _, r := range returns {
+		meanReturn += r
+	}
+	meanReturn /= float64(len(returns))
+	
+	variance := 0.0
+	for _, r := range returns {
+		variance += (r - meanReturn) * (r - meanReturn)
+	}
+	volatility := math.Sqrt(variance / float64(len(returns)))
+	
+	highestHigh := recentCandles[0].High
+	lowestLow := recentCandles[0].Low
+	for _, candle := range recentCandles {
+		if candle.High > highestHigh {
+			highestHigh = candle.High
+		}
+		if candle.Low < lowestLow {
+			lowestLow = candle.Low
+		}
+	}
+	
+	priceRange := highestHigh - lowestLow
+	startPrice := recentCandles[0].Close
+	endPrice := recentCandles[len(recentCandles)-1].Close
+	directionalMove := math.Abs(endPrice - startPrice)
+	
+	directionalStrength := 0.0
+	if priceRange > 0 {
+		directionalStrength = directionalMove / priceRange
+	}
+	
+	volatilityThreshold := 0.015 // 1.5% daily volatility is considered high
+	
+	directionalThreshold := 0.6 // 60% of the range is directional
+	
+	if volatility > volatilityThreshold && directionalStrength > directionalThreshold {
+		return TrendingMarket
+	} else if volatility > volatilityThreshold {
+		return VolatileMarket
+	} else {
+		return RangeMarket
+	}
 }
 
 func max(a, b, c int) int {
