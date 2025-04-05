@@ -16,37 +16,23 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 		return nil
 	}
 
+	shortMA := indicators.CalculateSMA(candles, params.MAShortPeriod)
+	longMA := indicators.CalculateSMA(candles, params.MALongPeriod)
+	rsi := indicators.CalculateRSI(candles, params.RSIPeriod)
+	atr := indicators.CalculateATR(candles, params.ATRPeriod)
+	emaShort := indicators.CalculateEMA(candles, params.EMAShortPeriod)
+	emaLong := indicators.CalculateEMA(candles, params.EMALongPeriod)
+	adx := indicators.CalculateADX(candles, params.ADXPeriod)
+	macd, macdSignal := indicators.CalculateMACD(candles, params.MACDShortPeriod, params.MACDLongPeriod, params.MACDSignalPeriod)
+
 	lookbackPeriod := 20
 	regime := DetectMarketRegime(candles, lookbackPeriod)
-
-	adjustedParams := params
-	switch regime {
-	case TrendingMarket:
-		adjustedParams.TakeProfitMultiplier *= 1.1 // Slightly increase take profit
-		adjustedParams.ADXThreshold *= 0.9         // Slightly lower ADX threshold
-	case VolatileMarket:
-		adjustedParams.StopLossMultiplier *= 0.9 // Tighter stop loss
-		adjustedParams.UseRSIFilter = true       // Enable RSI filter
-	case RangeMarket:
-		adjustedParams.UseRSIFilter = true // Enable RSI filter
-	}
-
-	shortMA := indicators.CalculateSMA(candles, adjustedParams.MAShortPeriod)
-	longMA := indicators.CalculateSMA(candles, adjustedParams.MALongPeriod)
-	rsi := indicators.CalculateRSI(candles, adjustedParams.RSIPeriod)
-	atr := indicators.CalculateATR(candles, adjustedParams.ATRPeriod)
-	emaShort := indicators.CalculateEMA(candles, adjustedParams.EMAShortPeriod)
-	emaLong := indicators.CalculateEMA(candles, adjustedParams.EMALongPeriod)
-
-	adx := indicators.CalculateADX(candles, adjustedParams.ADXPeriod)
-
-	macd, macdSignal := indicators.CalculateMACD(candles, adjustedParams.MACDShortPeriod, adjustedParams.MACDLongPeriod, adjustedParams.MACDSignalPeriod)
 
 	trend := make([]bool, len(candles))
 	volatility := make([]bool, len(candles))
 	for i := range candles {
 		trend[i] = emaShort[i] > emaLong[i]
-		volatility[i] = atr[i] > adjustedParams.ATRThreshold
+		volatility[i] = atr[i] > params.ATRThreshold
 	}
 
 	var appliedCandles []models.AppliedOHLCV
@@ -68,23 +54,34 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 	}
 
 	for i := 1; i < len(appliedCandles); i++ {
-		buyCondition := shortMA[i] > longMA[i] && macd[i] > macdSignal[i]
-		sellCondition := shortMA[i] < longMA[i] && macd[i] < macdSignal[i]
+		var buyCondition, sellCondition bool
 
-		if adx[i] > 25.0 && trend[i] {
-			buyCondition = buyCondition && true
-		} else if adx[i] > 25.0 && !trend[i] {
-			sellCondition = sellCondition && true
-		}
+		maCrossover := shortMA[i] > longMA[i] && shortMA[i-1] <= longMA[i-1]
+		maCrossunder := shortMA[i] < longMA[i] && shortMA[i-1] >= longMA[i-1]
+		
+		macdCrossover := macd[i] > macdSignal[i] && macd[i-1] <= macdSignal[i-1]
+		macdCrossunder := macd[i] < macdSignal[i] && macd[i-1] >= macdSignal[i-1]
+		
+		rsiOversold := rsi[i] < 30
+		rsiOverbought := rsi[i] > 70
 
-		if adjustedParams.UseRSIFilter {
-			buyCondition = buyCondition && rsi[i] < adjustedParams.BuyRSIThreshold
-			sellCondition = sellCondition && rsi[i] > adjustedParams.SellRSIThreshold
-		}
-
-		if adjustedParams.UseTrendFilter {
-			buyCondition = buyCondition && trend[i] && volatility[i]
-			sellCondition = sellCondition && !trend[i] && volatility[i]
+		switch regime {
+		case TrendingMarket:
+			if adx[i] > 20 { // Strong trend
+				buyCondition = (maCrossover || macdCrossover) && trend[i]
+				sellCondition = (maCrossunder || macdCrossunder) && !trend[i]
+			} else { // Weak trend
+				buyCondition = (maCrossover || (rsiOversold && trend[i]))
+				sellCondition = (maCrossunder || (rsiOverbought && !trend[i]))
+			}
+		
+		case VolatileMarket:
+			buyCondition = rsiOversold || macdCrossover
+			sellCondition = rsiOverbought || macdCrossunder
+		
+		case RangeMarket:
+			buyCondition = rsi[i] < 40 && rsi[i] > rsi[i-1]
+			sellCondition = rsi[i] > 60 && rsi[i] < rsi[i-1]
 		}
 
 		if buyCondition {

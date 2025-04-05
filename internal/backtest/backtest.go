@@ -113,29 +113,79 @@ func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams)
 			}
 
 			var riskPercentage float64
-			if isTrending {
-				riskPercentage = 0.03 // Higher risk in trending markets
-			} else if isVolatile {
-				riskPercentage = 0.02 // Lower risk in volatile markets
-			} else {
-				riskPercentage = 0.025 // Default risk
+			
+			recentPriceChange := 0.0
+			if i >= 10 {
+				recentPriceChange = math.Abs((candles[i].Close - candles[i-10].Close) / candles[i-10].Close)
 			}
-
+			
+			trendStrength := 0.0
+			if candles[i].ADX > 30.0 {
+				trendStrength = 1.5 // Very strong trend
+			} else if candles[i].ADX > 20.0 {
+				trendStrength = 1.2 // Strong trend
+			} else if candles[i].ADX > 15.0 {
+				trendStrength = 1.0 // Moderate trend
+			} else {
+				trendStrength = 0.8 // Weak or no trend
+			}
+			
+			if isTrending && candles[i].Trend {
+				riskPercentage = 0.05 * trendStrength
+			} else if isTrending && !candles[i].Trend {
+				riskPercentage = 0.02 * trendStrength
+			} else if isVolatile {
+				if candles[i].RSI < 30 {
+					riskPercentage = 0.04 // More aggressive on oversold conditions
+				} else if candles[i].RSI > 70 {
+					riskPercentage = 0.02 // More conservative on overbought conditions
+				} else {
+					riskPercentage = 0.03 // Moderate risk in neutral RSI
+				}
+			} else {
+				riskPercentage = 0.035
+			}
+			
+			if len(orders) >= 4 {
+				profitableTrades := 0
+				for j := len(orders) - 4; j < len(orders); j += 2 {
+					if orders[j].Action == "buy" && orders[j+1].Action == "sell" {
+						if orders[j+1].Price > orders[j].Price {
+							profitableTrades++
+						}
+					}
+				}
+				
+				if profitableTrades == 2 {
+					riskPercentage *= 1.2 // Increase risk after two wins
+				} else if profitableTrades == 0 {
+					riskPercentage *= 0.8 // Decrease risk after two losses
+				}
+			}
+			
 			riskAmount := capital * riskPercentage * volatilityFactor
-			stopLossDistance := atr * params.StopLossMultiplier
-
+			
+			var stopLossDistance float64
+			if isTrending {
+				stopLossDistance = atr * params.StopLossMultiplier * 1.2
+			} else if isVolatile {
+				stopLossDistance = atr * params.StopLossMultiplier * 0.8
+			} else {
+				stopLossDistance = atr * params.StopLossMultiplier
+			}
+			
 			var positionSize float64
 			if stopLossDistance > 0 {
 				positionSize = riskAmount / stopLossDistance
 			} else {
 				positionSize = capital / buyPrice * 0.5 // Default to 50% if can't calculate
 			}
-
+			
 			maxPositionSize := capital / buyPrice * (1 - b.Commission)
-			if positionSize > maxPositionSize*0.8 {
-				positionSize = maxPositionSize * 0.8 // Cap at 80% of available capital
-			} else if positionSize < maxPositionSize*0.15 {
-				positionSize = maxPositionSize * 0.15 // Minimum 15% of available capital
+			if positionSize > maxPositionSize * 0.9 {
+				positionSize = maxPositionSize * 0.9 // Cap at 90% of available capital for more aggressive sizing
+			} else if positionSize < maxPositionSize * 0.2 {
+				positionSize = maxPositionSize * 0.2 // Minimum 20% of available capital for more meaningful positions
 			}
 
 			position = positionSize
