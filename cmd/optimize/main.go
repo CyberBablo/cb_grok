@@ -280,6 +280,6 @@ func runOptimization(
 		zap.Float64("validation_win_rate", valWinRate),
 		zap.String("filename", filename))
 	tg.SendMessage(result)
-
+	os.Exit(0)
 	return nil
 }
