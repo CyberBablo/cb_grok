@@ -113,54 +113,36 @@ func DetectMarketRegime(candles []models.OHLCV, lookbackPeriod int) MarketRegime
 
 	recentCandles := candles[len(candles)-lookbackPeriod:]
 	
-	returns := make([]float64, lookbackPeriod-1)
-	for i := 1; i < lookbackPeriod; i++ {
-		returns[i-1] = (recentCandles[i].Close - recentCandles[i-1].Close) / recentCandles[i-1].Close
-	}
+	adx := indicators.CalculateADX(recentCandles, 20) // Use optimized ADX period
 	
-	meanReturn := 0.0
-	for _, r := range returns {
-		meanReturn += r
-	}
-	meanReturn /= float64(len(returns))
+	rsi := indicators.CalculateRSI(recentCandles, 11) // Use optimized RSI period
 	
-	variance := 0.0
-	for _, r := range returns {
-		variance += (r - meanReturn) * (r - meanReturn)
-	}
-	volatility := math.Sqrt(variance / float64(len(returns)))
+	atr := indicators.CalculateATR(recentCandles, 16) // Use optimized ATR period
 	
-	highestHigh := recentCandles[0].High
-	lowestLow := recentCandles[0].Low
-	for _, candle := range recentCandles {
-		if candle.High > highestHigh {
-			highestHigh = candle.High
-		}
-		if candle.Low < lowestLow {
-			lowestLow = candle.Low
+	latestADX := adx[len(adx)-1]
+	latestRSI := rsi[len(rsi)-1]
+	
+	avgATRPercentage := 0.0
+	count := 0
+	for i := len(recentCandles) - 5; i < len(recentCandles); i++ {
+		if i >= 0 && i < len(atr) && i < len(recentCandles) {
+			avgATRPercentage += atr[i] / recentCandles[i].Close
+			count++
 		}
 	}
-	
-	priceRange := highestHigh - lowestLow
-	startPrice := recentCandles[0].Close
-	endPrice := recentCandles[len(recentCandles)-1].Close
-	directionalMove := math.Abs(endPrice - startPrice)
-	
-	directionalStrength := 0.0
-	if priceRange > 0 {
-		directionalStrength = directionalMove / priceRange
+	if count > 0 {
+		avgATRPercentage /= float64(count)
 	}
 	
-	volatilityThreshold := 0.015 // 1.5% daily volatility is considered high
+	adxThreshold := 31.09 // From optimized parameters
+	atrThreshold := 0.0035 // 0.35% normalized from optimized parameters
 	
-	directionalThreshold := 0.6 // 60% of the range is directional
-	
-	if volatility > volatilityThreshold && directionalStrength > directionalThreshold {
-		return TrendingMarket
-	} else if volatility > volatilityThreshold {
-		return VolatileMarket
+	if latestADX > adxThreshold {
+		return TrendingMarket // Strong trend detected
+	} else if avgATRPercentage > atrThreshold {
+		return VolatileMarket // High volatility but no clear trend
 	} else {
-		return RangeMarket
+		return RangeMarket // Low volatility, no clear trend
 	}
 }
 

@@ -89,23 +89,27 @@ func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams)
 		if signal == 1 && capital > 0 {
 			buyPrice := nextOpen * (1 + b.SlippagePercent + b.Spread)
 			
-			riskPercentage := 0.02 // 2% risk per trade
-			atrPercentage := atr / nextOpen
+			riskAmount := capital * 0.02 // Risk 2% of capital per trade
+			stopLossDistance := atr * params.StopLossMultiplier
 			
-			positionSizeMultiplier := 1.0
-			if atrPercentage > 0 {
-				positionSizeMultiplier = riskPercentage / atrPercentage
-				if positionSizeMultiplier > 1.0 {
-					positionSizeMultiplier = 1.0
-				} else if positionSizeMultiplier < 0.1 {
-					positionSizeMultiplier = 0.1
-				}
+			var positionSize float64
+			if stopLossDistance > 0 {
+				positionSize = riskAmount / stopLossDistance
+			} else {
+				positionSize = capital / buyPrice * 0.5 // Default to 50% if can't calculate
 			}
 			
-			position = (capital / buyPrice * (1 - b.Commission)) * positionSizeMultiplier
+			maxPositionSize := capital / buyPrice * (1 - b.Commission)
+			if positionSize > maxPositionSize {
+				positionSize = maxPositionSize
+			} else if positionSize < maxPositionSize * 0.1 {
+				positionSize = maxPositionSize * 0.1
+			}
+			
+			position = positionSize
 			capital = capital - (position * buyPrice)
 			entryPrice = buyPrice
-			stopLoss = entryPrice - atr*params.StopLossMultiplier
+			stopLoss = entryPrice - stopLossDistance
 			takeProfit = entryPrice + atr*params.TakeProfitMultiplier
 			orders = append(orders, Order{Action: "buy", Amount: position, Price: buyPrice, Timestamp: timestamp})
 		} else if signal == -1 && position > 0 {
