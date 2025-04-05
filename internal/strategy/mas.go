@@ -130,8 +130,8 @@ func DetectMarketRegime(candles []models.OHLCV, lookbackPeriod int) MarketRegime
 		avgATRPercentage /= float64(count)
 	}
 	
-	adxThreshold := 31.09 // From optimized parameters
-	atrThreshold := 0.0035 // 0.35% normalized from optimized parameters
+	adxThreshold := 20.0 // Lower threshold to detect more trends
+	atrThreshold := 0.005 // 0.5% normalized for better volatility detection
 	
 	if latestADX > adxThreshold {
 		return TrendingMarket // Strong trend detected
