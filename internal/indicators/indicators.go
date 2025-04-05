@@ -128,17 +128,18 @@ func CalculateADX(candles []models.OHLCV, period int) []float64 {
 	adx := make([]float64, len(candles))
 
 	sum := 0.0
-	for i := period; i < 2*period; i++ {
-		if i < len(dx) {
-			sum += dx[i]
-		}
+	for i := period; i < min(len(dx), 2*period); i++ {
+		sum += dx[i]
 	}
-	if period < len(adx) {
-		adx[2*period-1] = sum / float64(period)
+	
+	if 2*period-1 < len(adx) && period > 0 {
+		adx[2*period-1] = sum / float64(min(period, len(dx)-period))
 	}
 
 	for i := 2 * period; i < len(candles); i++ {
-		adx[i] = ((adx[i-1] * float64(period-1)) + dx[i]) / float64(period)
+		if i-1 < len(adx) && i < len(dx) {
+			adx[i] = ((adx[i-1] * float64(period-1)) + dx[i]) / float64(period)
+		}
 	}
 
 	return adx
@@ -164,4 +165,79 @@ func max3(a, b, c float64) float64 {
 		return b
 	}
 	return c
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func CalculateBollingerBands(candles []models.OHLCV, period int, stdDev float64) ([]float64, []float64, []float64) {
+	if len(candles) < period {
+		return make([]float64, len(candles)), make([]float64, len(candles)), make([]float64, len(candles))
+	}
+
+	closes := make([]float64, len(candles))
+	for i, c := range candles {
+		closes[i] = c.Close
+	}
+
+	sma := CalculateSMA(candles, period)
+	
+	upper := make([]float64, len(candles))
+	lower := make([]float64, len(candles))
+	
+	for i := period - 1; i < len(candles); i++ {
+		sum := 0.0
+		for j := 0; j < period; j++ {
+			sum += math.Pow(closes[i-j]-sma[i], 2)
+		}
+		sd := math.Sqrt(sum / float64(period))
+		
+		upper[i] = sma[i] + stdDev*sd
+		lower[i] = sma[i] - stdDev*sd
+	}
+	
+	return upper, sma, lower
+}
+
+func CalculateStochastic(candles []models.OHLCV, kPeriod, dPeriod int) ([]float64, []float64) {
+	if len(candles) < kPeriod {
+		return make([]float64, len(candles)), make([]float64, len(candles))
+	}
+	
+	k := make([]float64, len(candles))
+	
+	for i := kPeriod - 1; i < len(candles); i++ {
+		highestHigh := candles[i].High
+		lowestLow := candles[i].Low
+		
+		for j := 0; j < kPeriod; j++ {
+			if candles[i-j].High > highestHigh {
+				highestHigh = candles[i-j].High
+			}
+			if candles[i-j].Low < lowestLow {
+				lowestLow = candles[i-j].Low
+			}
+		}
+		
+		if highestHigh - lowestLow > 0 {
+			k[i] = 100 * ((candles[i].Close - lowestLow) / (highestHigh - lowestLow))
+		} else {
+			k[i] = 50 // Default to middle if range is zero
+		}
+	}
+	
+	d := make([]float64, len(candles))
+	for i := kPeriod + dPeriod - 2; i < len(candles); i++ {
+		sum := 0.0
+		for j := 0; j < dPeriod; j++ {
+			sum += k[i-j]
+		}
+		d[i] = sum / float64(dPeriod)
+	}
+	
+	return k, d
 }
