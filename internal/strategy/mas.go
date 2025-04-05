@@ -68,17 +68,35 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 	}
 
 	for i := 1; i < len(appliedCandles); i++ {
-		buyCondition := shortMA[i] > longMA[i] && macd[i] > macdSignal[i] && adx[i] > adjustedParams.ADXThreshold
-		sellCondition := shortMA[i] < longMA[i] && macd[i] < macdSignal[i] && adx[i] > adjustedParams.ADXThreshold
-
-		if adjustedParams.UseRSIFilter {
-			buyCondition = buyCondition && rsi[i] < adjustedParams.BuyRSIThreshold
-			sellCondition = sellCondition && rsi[i] > adjustedParams.SellRSIThreshold
+		var buyCondition, sellCondition bool
+		
+		macdCrossover := macd[i] > macdSignal[i] && macd[i-1] <= macdSignal[i-1]
+		macdCrossunder := macd[i] < macdSignal[i] && macd[i-1] >= macdSignal[i-1]
+		
+		trendStrength := adx[i] > adjustedParams.ADXThreshold * 0.7
+		
+		switch regime {
+		case TrendingMarket:
+			buyCondition = shortMA[i] > longMA[i] && macd[i] > macdSignal[i] && trendStrength
+			sellCondition = shortMA[i] < longMA[i] && macd[i] < macdSignal[i] && trendStrength
+			
+			if adjustedParams.UseRSIFilter {
+				buyCondition = buyCondition && rsi[i] < 30
+				sellCondition = sellCondition && rsi[i] > 70
+			}
+		
+		case VolatileMarket:
+			buyCondition = rsi[i] < adjustedParams.BuyRSIThreshold && macdCrossover
+			sellCondition = rsi[i] > adjustedParams.SellRSIThreshold && macdCrossunder
+			
+		case RangeMarket:
+			buyCondition = rsi[i] < adjustedParams.BuyRSIThreshold && shortMA[i] > longMA[i]
+			sellCondition = rsi[i] > adjustedParams.SellRSIThreshold && shortMA[i] < longMA[i]
 		}
-
+		
 		if adjustedParams.UseTrendFilter {
-			buyCondition = buyCondition && trend[i] && volatility[i]
-			sellCondition = sellCondition && !trend[i] && volatility[i]
+			buyCondition = buyCondition && volatility[i]
+			sellCondition = sellCondition && volatility[i]
 		}
 
 		if buyCondition {
