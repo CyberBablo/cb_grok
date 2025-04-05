@@ -114,11 +114,6 @@ func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams)
 
 			var riskPercentage float64
 			
-			recentPriceChange := 0.0
-			if i >= 10 {
-				recentPriceChange = math.Abs((candles[i].Close - candles[i-10].Close) / candles[i-10].Close)
-			}
-			
 			trendStrength := 0.0
 			if candles[i].ADX > 30.0 {
 				trendStrength = 1.5 // Very strong trend
@@ -128,6 +123,13 @@ func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams)
 				trendStrength = 1.0 // Moderate trend
 			} else {
 				trendStrength = 0.8 // Weak or no trend
+			}
+			
+			if i >= 10 {
+				priceChange := math.Abs((candles[i].Close - candles[i-10].Close) / candles[i-10].Close)
+				if priceChange > 0.05 { // 5% change in 10 candles indicates strong movement
+					trendStrength *= 1.2
+				}
 			}
 			
 			if isTrending && candles[i].Trend {
