@@ -45,8 +45,6 @@ func CalculateATR(candles []models.OHLCV, period int) []float64 {
 	return atr
 }
 
-// CalculateADX временно закомментирован, так как Adx отсутствует в библиотеке
-/*
 func CalculateADX(candles []models.OHLCV, period int) []float64 {
 	highs := make([]float64, len(candles))
 	lows := make([]float64, len(candles))
@@ -56,10 +54,11 @@ func CalculateADX(candles []models.OHLCV, period int) []float64 {
 		lows[i] = c.Low
 		closes[i] = c.Close
 	}
-	// Здесь должна быть реализация ADX
-	return make([]float64, len(candles)) // Заглушка
+	
+	plusDI, minusDI, adx := indicator.Adx(period, highs, lows, closes)
+	
+	return adx
 }
-*/
 
 func CalculateMACD(candles []models.OHLCV, shortPeriod, longPeriod, signalPeriod int) ([]float64, []float64) {
 	closes := make([]float64, len(candles))
