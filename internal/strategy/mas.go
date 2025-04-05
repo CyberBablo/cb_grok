@@ -22,15 +22,13 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 	adjustedParams := params
 	switch regime {
 	case TrendingMarket:
-		adjustedParams.UseTrendFilter = true
-		adjustedParams.TakeProfitMultiplier *= 1.2
+		adjustedParams.TakeProfitMultiplier *= 1.1 // Slightly increase take profit
+		adjustedParams.ADXThreshold *= 0.9        // Slightly lower ADX threshold
 	case VolatileMarket:
-		adjustedParams.StopLossMultiplier *= 0.8
-		adjustedParams.TakeProfitMultiplier *= 0.8
-		adjustedParams.UseRSIFilter = true
+		adjustedParams.StopLossMultiplier *= 0.9  // Tighter stop loss
+		adjustedParams.UseRSIFilter = true        // Enable RSI filter
 	case RangeMarket:
-		adjustedParams.UseRSIFilter = true
-		adjustedParams.TakeProfitMultiplier *= 0.9
+		adjustedParams.UseRSIFilter = true        // Enable RSI filter
 	}
 
 	shortMA := indicators.CalculateSMA(candles, adjustedParams.MAShortPeriod)
@@ -39,7 +37,9 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 	atr := indicators.CalculateATR(candles, adjustedParams.ATRPeriod)
 	emaShort := indicators.CalculateEMA(candles, adjustedParams.EMAShortPeriod)
 	emaLong := indicators.CalculateEMA(candles, adjustedParams.EMALongPeriod)
+	
 	adx := indicators.CalculateADX(candles, adjustedParams.ADXPeriod)
+	
 	macd, macdSignal := indicators.CalculateMACD(candles, adjustedParams.MACDShortPeriod, adjustedParams.MACDLongPeriod, adjustedParams.MACDSignalPeriod)
 
 	trend := make([]bool, len(candles))
@@ -68,35 +68,22 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 	}
 
 	for i := 1; i < len(appliedCandles); i++ {
-		var buyCondition, sellCondition bool
+		buyCondition := shortMA[i] > longMA[i] && macd[i] > macdSignal[i]
+		sellCondition := shortMA[i] < longMA[i] && macd[i] < macdSignal[i]
 		
-		macdCrossover := macd[i] > macdSignal[i] && macd[i-1] <= macdSignal[i-1]
-		macdCrossunder := macd[i] < macdSignal[i] && macd[i-1] >= macdSignal[i-1]
+		if adx[i] > adjustedParams.ADXThreshold {
+			buyCondition = buyCondition && trend[i]
+			sellCondition = sellCondition && !trend[i]
+		}
 		
-		trendStrength := adx[i] > adjustedParams.ADXThreshold * 0.7
-		
-		switch regime {
-		case TrendingMarket:
-			buyCondition = shortMA[i] > longMA[i] && macd[i] > macdSignal[i] && trendStrength
-			sellCondition = shortMA[i] < longMA[i] && macd[i] < macdSignal[i] && trendStrength
-			
-			if adjustedParams.UseRSIFilter {
-				buyCondition = buyCondition && rsi[i] < 30
-				sellCondition = sellCondition && rsi[i] > 70
-			}
-		
-		case VolatileMarket:
-			buyCondition = rsi[i] < adjustedParams.BuyRSIThreshold && macdCrossover
-			sellCondition = rsi[i] > adjustedParams.SellRSIThreshold && macdCrossunder
-			
-		case RangeMarket:
-			buyCondition = rsi[i] < adjustedParams.BuyRSIThreshold && shortMA[i] > longMA[i]
-			sellCondition = rsi[i] > adjustedParams.SellRSIThreshold && shortMA[i] < longMA[i]
+		if adjustedParams.UseRSIFilter {
+			buyCondition = buyCondition && rsi[i] < adjustedParams.BuyRSIThreshold
+			sellCondition = sellCondition && rsi[i] > adjustedParams.SellRSIThreshold
 		}
 		
 		if adjustedParams.UseTrendFilter {
-			buyCondition = buyCondition && volatility[i]
-			sellCondition = sellCondition && volatility[i]
+			buyCondition = buyCondition && trend[i] && volatility[i]
+			sellCondition = sellCondition && !trend[i] && volatility[i]
 		}
 
 		if buyCondition {

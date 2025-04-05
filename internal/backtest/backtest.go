@@ -89,7 +89,22 @@ func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams)
 		if signal == 1 && capital > 0 {
 			buyPrice := nextOpen * (1 + b.SlippagePercent + b.Spread)
 			
-			riskAmount := capital * 0.03 // Risk 3% of capital per trade
+			volatilityFactor := 1.0
+			if i >= 5 {
+				recentATR := 0.0
+				for j := 0; j < 5; j++ {
+					recentATR += candles[i-j].ATR
+				}
+				recentATR /= 5.0
+				
+				if candles[i].ATR > recentATR * 1.2 {
+					volatilityFactor = 0.8
+				} else if candles[i].ATR < recentATR * 0.8 {
+					volatilityFactor = 1.2
+				}
+			}
+			
+			riskAmount := capital * 0.025 * volatilityFactor
 			stopLossDistance := atr * params.StopLossMultiplier
 			
 			var positionSize float64
@@ -100,10 +115,10 @@ func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams)
 			}
 			
 			maxPositionSize := capital / buyPrice * (1 - b.Commission)
-			if positionSize > maxPositionSize {
-				positionSize = maxPositionSize
-			} else if positionSize < maxPositionSize * 0.2 {
-				positionSize = maxPositionSize * 0.2
+			if positionSize > maxPositionSize * 0.8 {
+				positionSize = maxPositionSize * 0.8 // Cap at 80% of available capital
+			} else if positionSize < maxPositionSize * 0.15 {
+				positionSize = maxPositionSize * 0.15 // Minimum 15% of available capital
 			}
 			
 			position = positionSize
