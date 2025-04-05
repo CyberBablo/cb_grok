@@ -114,8 +114,6 @@ func DetectMarketRegime(candles []models.OHLCV, lookbackPeriod int) MarketRegime
 	
 	adx := indicators.CalculateADX(recentCandles, 20) // Use optimized ADX period
 	
-	rsi := indicators.CalculateRSI(recentCandles, 11) // Use optimized RSI period
-	
 	atr := indicators.CalculateATR(recentCandles, 16) // Use optimized ATR period
 	
 	latestADX := adx[len(adx)-1]
