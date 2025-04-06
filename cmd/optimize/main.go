@@ -222,7 +222,7 @@ func runOptimization(
 			SellThreshold:        sellThreshold,
 		}
 
-		trainSharpe, trainOrders, _, trainMaxDD, trainWinRate, err := bt.Run(trainCandles, params)
+		trainSharpe, _, _, trainMaxDD, _, err := bt.Run(trainCandles, params)
 		if err != nil {
 			return 0, err
 		}
