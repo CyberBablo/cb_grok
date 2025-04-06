@@ -28,7 +28,11 @@ type StrategyParams struct {
 	MACDWeight          float64 `json:"macd_weight,omitempty"`
 	BuySignalThreshold  float64 `json:"buy_signal_threshold,omitempty"`
 	SellSignalThreshold float64 `json:"sell_signal_threshold,omitempty"`
-	Pair                string  `json:"pair,omitempty"`
+	BollingerPeriod     int     `json:"bollinger_period,omitempty"`
+	BollingerStdDev     float64 `json:"bollinger_std_dev,omitempty"`
+	BBWeight            float64 `json:"bb_weight,omitempty"`
+
+	Pair string `json:"pair,omitempty"`
 }
 
 type Signals struct {
@@ -36,6 +40,7 @@ type Signals struct {
 	RSISignal   int
 	MACDSignal  int
 	TrendSignal int
+	BBSignal    int
 }
 
 func Tanh(x float64) float64 {

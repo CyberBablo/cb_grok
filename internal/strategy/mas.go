@@ -12,7 +12,7 @@ func NewMovingAverageStrategy() Strategy {
 }
 
 func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyParams) []models.AppliedOHLCV {
-	if len(candles) < max(params.MALongPeriod, params.EMALongPeriod, params.MACDLongPeriod) {
+	if len(candles) < max(params.MALongPeriod, params.EMALongPeriod, params.MACDLongPeriod, params.BollingerPeriod) {
 		return nil
 	}
 
@@ -23,6 +23,9 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 	emaShort := indicators.CalculateEMA(candles, params.EMAShortPeriod)
 	emaLong := indicators.CalculateEMA(candles, params.EMALongPeriod)
 	macd, macdSignal := indicators.CalculateMACD(candles, params.MACDShortPeriod, params.MACDLongPeriod, params.MACDSignalPeriod)
+
+	// Рассчитываем Bollinger Bands
+	upperBB, _, lowerBB := indicators.CalculateBollingerBands(candles, params.BollingerPeriod, params.BollingerStdDev)
 
 	trend := make([]bool, len(candles))
 	volatility := make([]bool, len(candles))
@@ -45,11 +48,13 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 			Volatility: volatility[i],
 			MACD:       macd[i],
 			MACDSignal: macdSignal[i],
+			UpperBB:    upperBB[i],
+			LowerBB:    lowerBB[i],
 		})
 	}
 
 	for i := 1; i < len(appliedCandles); i++ {
-		signals := Signals{EMASignal: 0, RSISignal: 0, MACDSignal: 0, TrendSignal: 0}
+		signals := Signals{EMASignal: 0, RSISignal: 0, MACDSignal: 0, TrendSignal: 0, BBSignal: 0}
 
 		if shortMA[i] > longMA[i] {
 			signals.EMASignal = 1
@@ -74,33 +79,41 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 			signals.RSISignal = -1
 		}
 
-		totalWeight := params.RSIWeight + params.MACDWeight + params.TrendWeight + params.EMAWeight
+		// Логика сигналов Bollinger Bands
+		if candles[i].Close < appliedCandles[i].LowerBB {
+			signals.BBSignal = 1 // Покупка
+		} else if candles[i].Close > appliedCandles[i].UpperBB {
+			signals.BBSignal = -1 // Продажа
+		} else {
+			signals.BBSignal = 0
+		}
+
+		totalWeight := params.RSIWeight + params.MACDWeight + params.TrendWeight + params.EMAWeight + params.BBWeight
+		if totalWeight == 0 {
+			totalWeight = 1 // Избегаем деления на ноль
+		}
 		params.RSIWeight = params.RSIWeight / totalWeight
 		params.TrendWeight = params.TrendWeight / totalWeight
 		params.MACDWeight = params.MACDWeight / totalWeight
 		params.EMAWeight = params.EMAWeight / totalWeight
+		params.BBWeight = params.BBWeight / totalWeight
 
 		signal :=
 			float64(signals.RSISignal)*params.RSIWeight +
 				float64(signals.MACDSignal)*params.MACDWeight +
 				float64(signals.TrendSignal)*params.TrendWeight +
-				float64(signals.EMASignal)*params.EMAWeight
+				float64(signals.EMASignal)*params.EMAWeight +
+				float64(signals.BBSignal)*params.BBWeight
 
 		signal = Tanh(signal)
 
 		if signal > params.BuySignalThreshold {
-			//fmt.Println("SIGNAL", signal, params.BuySignalThreshold, params.SellSignalThreshold)
 			appliedCandles[i].Signal = 1
 		} else if signal < params.SellSignalThreshold {
-			//fmt.Println("SIGNAL", signal, params.BuySignalThreshold, params.SellSignalThreshold)
-
 			appliedCandles[i].Signal = -1
 		} else {
 			appliedCandles[i].Signal = 0
 		}
-		//fmt.Println("SIGNALS", signals, signal)
-		//fmt.Println("WEIGHTS", params.RSIWeight, params.MACDWeight, params.TrendWeight, params.EMAWeight)
-		//fmt.Println("FINAL SIGNAL", appliedCandles[i].Signal)
 
 		if i > 0 {
 			appliedCandles[i].Position = appliedCandles[i].Signal - appliedCandles[i-1].Signal
@@ -110,15 +123,37 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 	return appliedCandles
 }
 
-func max(a, b, c int) int {
-	if a > b {
-		if a > c {
-			return a
-		}
-		return c
+/*
+
+package strategy
+
+import (
+	"cb_grok/internal/indicators"
+	"cb_grok/pkg/models"
+)
+
+func max(a, b, c, d int) int {
+	if a >= b && a >= c && a >= d {
+		return a
 	}
-	if b > c {
+	if b >= a && b >= c && b >= d {
 		return b
 	}
-	return c
+	if c >= a && c >= b && c >= d {
+		return c
+	}
+	return d
 }
+
+func Tanh(x float64) float64 {
+	return (2 / (1 + Exp(-2*x))) - 1
+}
+
+func Exp(x float64) float64 {
+	return 2.71828182845904523536028747135266250 // Примерная реализация, замените на math.Exp при необходимости
+}
+
+type MovingAverageStrategy struct{}
+
+
+*/

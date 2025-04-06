@@ -13,6 +13,7 @@ import (
 	"github.com/c-bata/goptuna"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
+	"math"
 	"os"
 	"path/filepath"
 	"time"
@@ -50,9 +51,9 @@ func runOptimization(
 		return err
 	}
 
-	pair := "BTC/USDT"
+	pair := "XRP/USDT"
 
-	candles, err := ex.FetchOHLCV(pair, "1h", 5000)
+	candles, err := ex.FetchOHLCV(pair, "30m", 10000)
 	if err != nil {
 		log.Error("optimize: fetch OHLCV", zap.Error(err))
 		return err
@@ -60,7 +61,7 @@ func runOptimization(
 
 	log.Info("optimize: OHLCV data", zap.Int("length", len(candles)))
 
-	candlesPerDay := 24
+	candlesPerDay := 48
 	validationCandlesCount := validationSetDays * candlesPerDay
 
 	if validationCandlesCount >= len(candles) {
@@ -164,6 +165,19 @@ func runOptimization(
 			return 0, err
 		}
 
+		bollingerPeriod, err := trial.SuggestInt("bollinger_period", 10, 50)
+		if err != nil {
+			return 0, err
+		}
+		bollingerStdDev, err := trial.SuggestFloat("bollinger_std_dev", 1.0, 3.0)
+		if err != nil {
+			return 0, err
+		}
+		bbWeight, err := trial.SuggestFloat("bb_weight", 0, 1)
+		if err != nil {
+			return 0, err
+		}
+
 		params := strategy.StrategyParams{
 			MAShortPeriod:       maShortPeriod,
 			MALongPeriod:        maLongPeriod,
@@ -183,6 +197,9 @@ func runOptimization(
 			MACDWeight:          macdWeight,
 			BuySignalThreshold:  buySignalThreshold,
 			SellSignalThreshold: sellSignalThreshold,
+			BollingerPeriod:     bollingerPeriod,
+			BollingerStdDev:     bollingerStdDev,
+			BBWeight:            bbWeight,
 			Pair:                pair,
 		}
 
@@ -191,13 +208,15 @@ func runOptimization(
 			return 0, err
 		}
 
-		valSharpe, _, _, valMaxDD, valWinRate, err := bt.Run(validationCandles, params)
+		valSharpe, valOrders, _, valMaxDD, valWinRate, err := bt.Run(validationCandles, params)
 		if err != nil {
 			log.Warn("Failed to run backtest on validation set", zap.Error(err))
 			return trainSharpe, nil
 		}
 
-		combinedSharpe := (valSharpe + trainSharpe) / 2
+		//combinedSharpe := (valSharpe + trainSharpe) / 2 * math.Log(float64(len(valOrders)+1))
+
+		combinedSharpe := valSharpe * (1 - valMaxDD/100) * math.Log(float64(len(valOrders)+1))
 		//combinedSharpe = combinedSharpe * valWinRate / 100
 		log.Info("Trial result",
 			zap.Int("trial", trial.ID),
@@ -247,6 +266,9 @@ func runOptimization(
 		MACDWeight:          bestParams["macd_weight"].(float64),
 		BuySignalThreshold:  bestParams["buy_signal_threshold"].(float64),
 		SellSignalThreshold: bestParams["sell_signal_threshold"].(float64),
+		BollingerPeriod:     bestParams["bollinger_period"].(int),
+		BollingerStdDev:     bestParams["bollinger_std_dev"].(float64),
+		BBWeight:            bestParams["bb_weight"].(float64),
 		Pair:                pair,
 	}
 
