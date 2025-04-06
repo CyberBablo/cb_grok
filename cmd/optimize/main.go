@@ -144,7 +144,7 @@ func runOptimization(
 		if err != nil {
 			return 0, err
 		}
-		adxThreshold, err := trial.SuggestFloat("adx_threshold", 20, 40)
+		adxThreshold, err := trial.SuggestFloat("adx_threshold", 15, 40)
 		if err != nil {
 			return 0, err
 		}
@@ -157,6 +157,36 @@ func runOptimization(
 			return 0, err
 		}
 		macdSignalPeriod, err := trial.SuggestInt("macd_signal_period", 5, 15)
+		if err != nil {
+			return 0, err
+		}
+		
+		maWeight, err := trial.SuggestFloat("ma_weight", 0.1, 1.0)
+		if err != nil {
+			return 0, err
+		}
+		macdWeight, err := trial.SuggestFloat("macd_weight", 0.1, 1.0)
+		if err != nil {
+			return 0, err
+		}
+		rsiWeight, err := trial.SuggestFloat("rsi_weight", 0.1, 1.0)
+		if err != nil {
+			return 0, err
+		}
+		adxWeight, err := trial.SuggestFloat("adx_weight", 0.1, 1.0)
+		if err != nil {
+			return 0, err
+		}
+		trendWeight, err := trial.SuggestFloat("trend_weight", 0.1, 1.0)
+		if err != nil {
+			return 0, err
+		}
+		
+		buyThreshold, err := trial.SuggestFloat("buy_threshold", 0.5, 2.0)
+		if err != nil {
+			return 0, err
+		}
+		sellThreshold, err := trial.SuggestFloat("sell_threshold", 0.5, 2.0)
 		if err != nil {
 			return 0, err
 		}
@@ -181,9 +211,18 @@ func runOptimization(
 			MACDShortPeriod:      macdShortPeriod,
 			MACDLongPeriod:       macdLongPeriod,
 			MACDSignalPeriod:     macdSignalPeriod,
+			
+			MAWeight:             maWeight,
+			MACDWeight:           macdWeight,
+			RSIWeight:            rsiWeight,
+			ADXWeight:            adxWeight,
+			TrendWeight:          trendWeight,
+			
+			BuyThreshold:         buyThreshold,
+			SellThreshold:        sellThreshold,
 		}
 
-		trainSharpe, _, _, trainMaxDD, trainWinRate, err := bt.Run(trainCandles, params)
+		trainSharpe, trainOrders, _, trainMaxDD, trainWinRate, err := bt.Run(trainCandles, params)
 		if err != nil {
 			return 0, err
 		}
@@ -193,22 +232,41 @@ func runOptimization(
 			log.Warn("Failed to run backtest on validation set", zap.Error(err))
 			return trainSharpe, nil
 		}
-		activity := float64((len(valOrders) / 10))
-		if activity > 1 {
+		
+		tradesPerMonth := float64(len(valOrders)) / float64(validationSetDays) * 30.0
+		activity := tradesPerMonth / 20.0
+		if activity > 1.0 {
 			activity = 1.0
 		}
-		combinedSharpe := ((trainSharpe + valSharpe) / 2)
-		//combinedSharpe = combinedSharpe * valWinRate / 100
+		if activity < 0.5 {
+			activity = 0.5 // Penalty for too few trades
+		}
+		
+		winRateScore := 0.0
+		if valWinRate >= 75.0 && valWinRate <= 80.0 {
+			winRateScore = 1.0
+		} else if valWinRate > 80.0 {
+			winRateScore = 0.9 // Small penalty for too high win rate
+		} else if valWinRate >= 70.0 {
+			winRateScore = 0.8 // Penalty for win rate below target
+		} else {
+			winRateScore = valWinRate / 75.0 // Linear penalty for low win rate
+		}
+		
+		combinedScore := ((trainSharpe + valSharpe) / 2) * activity * winRateScore
+		
 		log.Info("Trial result",
 			zap.Int("trial", trial.ID),
-			zap.Float64("combined_sharpe", combinedSharpe),
+			zap.Float64("combined_score", combinedScore),
+			zap.Float64("trades_per_month", tradesPerMonth),
+			zap.Float64("win_rate", valWinRate),
+			zap.Float64("activity_score", activity),
+			zap.Float64("win_rate_score", winRateScore),
 			zap.Float64("train_max_dd", trainMaxDD),
-			zap.Float64("train_win_rate", trainWinRate),
 			zap.Float64("val_max_dd", valMaxDD),
-			zap.Float64("val_win_rate", valWinRate),
 		)
 
-		return combinedSharpe, nil
+		return combinedScore, nil
 	}
 
 	err = study.Optimize(objective, 10000)

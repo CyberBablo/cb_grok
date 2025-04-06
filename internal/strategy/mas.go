@@ -51,27 +51,45 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 	}
 
 	for i := 1; i < len(appliedCandles); i++ {
-		buyCondition := shortMA[i] > longMA[i] && macd[i] > macdSignal[i]
-		sellCondition := shortMA[i] < longMA[i] && macd[i] < macdSignal[i]
+		buyScore := 0.0
+		sellScore := 0.0
 		
-		if params.UseADXFilter {
-			buyCondition = buyCondition && adx[i] > params.ADXThreshold
-			sellCondition = sellCondition && adx[i] > params.ADXThreshold
+		if shortMA[i] > longMA[i] {
+			buyScore += params.MAWeight
+		} else if shortMA[i] < longMA[i] {
+			sellScore += params.MAWeight
 		}
-
+		
+		if macd[i] > macdSignal[i] {
+			buyScore += params.MACDWeight
+		} else if macd[i] < macdSignal[i] {
+			sellScore += params.MACDWeight
+		}
+		
 		if params.UseRSIFilter {
-			buyCondition = buyCondition && rsi[i] < params.BuyRSIThreshold
-			sellCondition = sellCondition && rsi[i] > params.SellRSIThreshold
+			if rsi[i] < params.BuyRSIThreshold {
+				buyScore += params.RSIWeight
+			} else if rsi[i] > params.SellRSIThreshold {
+				sellScore += params.RSIWeight
+			}
 		}
-
+		
+		if params.UseADXFilter && adx[i] > params.ADXThreshold {
+			buyScore += params.ADXWeight
+			sellScore += params.ADXWeight
+		}
+		
 		if params.UseTrendFilter {
-			buyCondition = buyCondition && trend[i] && volatility[i]
-			sellCondition = sellCondition && !trend[i] && volatility[i]
+			if trend[i] && volatility[i] {
+				buyScore += params.TrendWeight
+			} else if !trend[i] && volatility[i] {
+				sellScore += params.TrendWeight
+			}
 		}
-
-		if buyCondition {
+		
+		if buyScore >= params.BuyThreshold {
 			appliedCandles[i].Signal = 1
-		} else if sellCondition {
+		} else if sellScore >= params.SellThreshold {
 			appliedCandles[i].Signal = -1
 		} else {
 			appliedCandles[i].Signal = 0

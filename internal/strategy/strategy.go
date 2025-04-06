@@ -28,4 +28,13 @@ type StrategyParams struct {
 	MACDShortPeriod      int
 	MACDLongPeriod       int
 	MACDSignalPeriod     int
+	
+	MAWeight             float64
+	MACDWeight           float64
+	RSIWeight            float64
+	ADXWeight            float64
+	TrendWeight          float64
+	
+	BuyThreshold         float64
+	SellThreshold        float64
 }
