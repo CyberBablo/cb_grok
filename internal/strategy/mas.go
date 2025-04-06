@@ -22,7 +22,7 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 	atr := indicators.CalculateATR(candles, params.ATRPeriod)
 	emaShort := indicators.CalculateEMA(candles, params.EMAShortPeriod)
 	emaLong := indicators.CalculateEMA(candles, params.EMALongPeriod)
-	// adx := indicators.CalculateADX(candles, params.ADXPeriod) // Временно исключено
+	adx := indicators.CalculateADX(candles, params.ADXPeriod) // Uncommented ADX calculation
 	macd, macdSignal := indicators.CalculateMACD(candles, params.MACDShortPeriod, params.MACDLongPeriod, params.MACDSignalPeriod)
 
 	trend := make([]bool, len(candles))
@@ -44,18 +44,18 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 			LongEMA:    emaLong[i],
 			Trend:      trend[i],
 			Volatility: volatility[i],
-			// ADX:        adx[i], // Временно исключено
+			ADX:        adx[i], // Uncommented ADX field
 			MACD:       macd[i],
 			MACDSignal: macdSignal[i],
 		})
 	}
 
 	for i := 1; i < len(appliedCandles); i++ {
-		// buyCondition := shortMA[i] > longMA[i] && macd[i] > macdSignal[i] && adx[i] > params.ADXThreshold
-		// sellCondition := shortMA[i] < longMA[i] && macd[i] < macdSignal[i] && adx[i] > params.ADXThreshold
-		// Временно исключаем ADX из условий
-		buyCondition := shortMA[i] > longMA[i] && macd[i] > macdSignal[i]
-		sellCondition := shortMA[i] < longMA[i] && macd[i] < macdSignal[i]
+		buyCondition := shortMA[i] > longMA[i] && macd[i] > macdSignal[i] && adx[i] > params.ADXThreshold
+		sellCondition := shortMA[i] < longMA[i] && macd[i] < macdSignal[i] && adx[i] > params.ADXThreshold
+
+		// buyCondition := shortMA[i] > longMA[i] && macd[i] > macdSignal[i]
+		// sellCondition := shortMA[i] < longMA[i] && macd[i] < macdSignal[i]
 
 		if params.UseRSIFilter {
 			buyCondition = buyCondition && rsi[i] < params.BuyRSIThreshold
