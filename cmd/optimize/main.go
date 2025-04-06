@@ -50,8 +50,8 @@ func runOptimization(
 		log.Error("optimize: initialize Binance exchange", zap.Error(err))
 		return err
 	}
-
-	candles, err := ex.FetchOHLCV("BNB/USDT", "30m", 10000)
+	pair := "BNB/USDT"
+	candles, err := ex.FetchOHLCV(pair, "15m", 6000)
 	if err != nil {
 		log.Error("optimize: fetch OHLCV", zap.Error(err))
 		return err
@@ -59,7 +59,7 @@ func runOptimization(
 
 	log.Info("optimize: OHLCV data", zap.Int("length", len(candles)))
 
-	candlesPerDay := 48
+	candlesPerDay := 96
 	validationCandlesCount := validationSetDays * candlesPerDay
 
 	if validationCandlesCount >= len(candles) {
@@ -73,7 +73,7 @@ func runOptimization(
 	log.Info("optimize: datasets prepared",
 		zap.Int("train_candles", len(trainCandles)),
 		zap.Int("validation_candles", len(validationCandles)))
-
+	//os.Exit(0)
 	study, err := goptuna.CreateStudy(
 		"strategy_1",
 		goptuna.StudyOptionDirection(goptuna.StudyDirectionMaximize),
@@ -132,6 +132,10 @@ func runOptimization(
 		if err != nil {
 			return 0, err
 		}
+		useAdxFilter, err := trial.SuggestCategorical("use_adx_filter", []string{"true", "false"})
+		if err != nil {
+			return 0, err
+		}
 		atrThreshold, err := trial.SuggestFloat("atr_threshold", 0.0, 2.0)
 		if err != nil {
 			return 0, err
@@ -170,6 +174,7 @@ func runOptimization(
 			EMALongPeriod:        emaLongPeriod,
 			UseTrendFilter:       lo.If(useTrendFilter == "true", true).Else(false),
 			UseRSIFilter:         lo.If(useRsiFilter == "true", true).Else(false),
+			UseADXFilter:         lo.If(useAdxFilter == "true", true).Else(false),
 			ATRThreshold:         atrThreshold,
 			ADXPeriod:            adxPeriod,
 			ADXThreshold:         adxThreshold,
@@ -183,13 +188,16 @@ func runOptimization(
 			return 0, err
 		}
 
-		valSharpe, _, _, valMaxDD, valWinRate, err := bt.Run(validationCandles, params)
+		valSharpe, valOrders, _, valMaxDD, valWinRate, err := bt.Run(validationCandles, params)
 		if err != nil {
 			log.Warn("Failed to run backtest on validation set", zap.Error(err))
 			return trainSharpe, nil
 		}
-
-		combinedSharpe := (trainSharpe + valSharpe) / 2
+		activity := float64((len(valOrders) / 10))
+		if activity > 1 {
+			activity = 1.0
+		}
+		combinedSharpe := ((trainSharpe + valSharpe) / 2)
 		//combinedSharpe = combinedSharpe * valWinRate / 100
 		log.Info("Trial result",
 			zap.Int("trial", trial.ID),
@@ -203,7 +211,7 @@ func runOptimization(
 		return combinedSharpe, nil
 	}
 
-	err = study.Optimize(objective, 1000)
+	err = study.Optimize(objective, 10000)
 	if err != nil {
 		log.Error("optimize: study optimize", zap.Error(err))
 		return err
@@ -233,6 +241,7 @@ func runOptimization(
 		EMALongPeriod:        bestParams["ema_long_period"].(int),
 		UseTrendFilter:       bestParams["use_trend_filter"].(string) == "true",
 		UseRSIFilter:         bestParams["use_rsi_filter"].(string) == "true",
+		UseADXFilter:         bestParams["use_adx_filter"].(string) == "true",
 		ATRThreshold:         bestParams["atr_threshold"].(float64),
 		ADXPeriod:            bestParams["adx_period"].(int),
 		ADXThreshold:         bestParams["adx_threshold"].(float64),
@@ -270,8 +279,8 @@ func runOptimization(
 	}
 	orderCount := len(orders)
 	result := fmt.Sprintf(
-		"Оптимизация завершена.\nКоличество сделок: %d\nКомбинированный Sharpe Ratio: %.2f\nВалидационный Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
-		orderCount, combinedSharpeRatio, valSharpe, capital, valMaxDD, valWinRate, filename)
+		"Оптимизация завершена.\nВалютная пара: %s\nКоличество сделок: %d\nКомбинированный Sharpe Ratio: %.2f\nВалидационный Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
+		pair, orderCount, combinedSharpeRatio, valSharpe, capital, valMaxDD, valWinRate, filename)
 
 	log.Info("optimization completed",
 		zap.Float64("combined_sharpe_ratio", combinedSharpeRatio),
@@ -280,6 +289,5 @@ func runOptimization(
 		zap.Float64("validation_win_rate", valWinRate),
 		zap.String("filename", filename))
 	tg.SendMessage(result)
-	os.Exit(0)
 	return nil
 }
