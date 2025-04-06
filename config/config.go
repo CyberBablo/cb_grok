@@ -14,7 +14,7 @@ type Exchange struct {
 	ProxyUrl  string `yaml:"proxy_url"`
 	IsDemo    bool   `yaml:"is_demo"`
 	ApiSecret string `yaml:"api_secret"`
-	ApuPublic string `yaml:"apu_public"`
+	ApiPublic string `yaml:"api_public"`
 }
 
 type TelegramBot struct {

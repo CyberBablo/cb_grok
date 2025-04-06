@@ -1,7 +1,19 @@
 package exchange
 
-import "go.uber.org/fx"
+import (
+	"cb_grok/config"
+	"go.uber.org/fx"
+)
 
 var Module = fx.Module("exchange",
-	fx.Provide(NewBinance),
+	fx.Provide(
+		func(cfg config.Config) (Exchange, error) {
+			return NewBinance(
+				cfg.Binance.IsDemo,
+				cfg.Binance.ApiPublic,
+				cfg.Binance.ApiSecret,
+				cfg.Binance.ProxyUrl,
+			)
+		},
+	),
 )
