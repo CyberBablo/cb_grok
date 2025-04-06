@@ -14,6 +14,7 @@ import (
 	"github.com/samber/lo"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
+	"math"
 	"os"
 	"path/filepath"
 	"time"
@@ -45,7 +46,7 @@ func runOptimization(
 		return fmt.Errorf("validation days must be greater than 0")
 	}
 
-	ex, err := exchange.NewBinance(false, cfg.Binance.ApuPublic, cfg.Binance.ApiSecret, cfg.Binance.ProxyUrl)
+	ex, err := exchange.NewBinance(false, cfg.Binance.ApiPublic, cfg.Binance.ApiSecret, cfg.Binance.ProxyUrl)
 	if err != nil {
 		log.Error("optimize: initialize Binance exchange", zap.Error(err))
 		return err
@@ -234,38 +235,59 @@ func runOptimization(
 		}
 		
 		tradesPerMonth := float64(len(valOrders)) / float64(validationSetDays) * 30.0
-		activity := tradesPerMonth / 20.0
-		if activity > 1.0 {
-			activity = 1.0
-		}
-		if activity < 0.5 {
-			activity = 0.5 // Penalty for too few trades
+		
+		tradeFrequencyScore := 0.0
+		if tradesPerMonth >= 15.0 && tradesPerMonth <= 20.0 {
+			tradeFrequencyScore = 1.0 // Perfect trade frequency
+		} else if tradesPerMonth > 20.0 && tradesPerMonth <= 30.0 {
+			tradeFrequencyScore = 0.9 - ((tradesPerMonth - 20.0) / 100.0) // Small penalty for too many trades
+		} else if tradesPerMonth > 30.0 && tradesPerMonth <= 50.0 {
+			tradeFrequencyScore = 0.8 - ((tradesPerMonth - 30.0) / 100.0) // Medium penalty for excessive trades
+		} else if tradesPerMonth > 50.0 {
+			tradeFrequencyScore = 0.7 - ((tradesPerMonth - 50.0) / 500.0) // Larger penalty for too many trades
+			if tradeFrequencyScore < 0.3 {
+				tradeFrequencyScore = 0.3 // Floor for extremely high trade counts
+			}
+		} else if tradesPerMonth >= 10.0 && tradesPerMonth < 15.0 {
+			tradeFrequencyScore = 0.9 - ((15.0 - tradesPerMonth) / 50.0) // Small penalty for slightly too few trades
+		} else if tradesPerMonth >= 5.0 && tradesPerMonth < 10.0 {
+			tradeFrequencyScore = 0.8 - ((10.0 - tradesPerMonth) / 50.0) // Medium penalty for too few trades
+		} else {
+			tradeFrequencyScore = 0.5 * (tradesPerMonth / 5.0) // Severe penalty for almost no trades
 		}
 		
 		winRateScore := 0.0
 		if valWinRate >= 75.0 && valWinRate <= 80.0 {
-			winRateScore = 1.0
-		} else if valWinRate > 80.0 {
-			winRateScore = 0.9 // Small penalty for too high win rate
-		} else if valWinRate >= 70.0 {
-			winRateScore = 0.8 // Penalty for win rate below target
-		} else if valWinRate >= 60.0 {
-			winRateScore = 0.7 // Higher penalty for win rate below 70%
-		} else if valWinRate >= 50.0 {
-			winRateScore = 0.5 // Significant penalty for win rate below 60%
+			winRateScore = 1.0 // Perfect win rate
+		} else if valWinRate > 80.0 && valWinRate <= 90.0 {
+			winRateScore = 0.95 - ((valWinRate - 80.0) / 200.0) // Small penalty for too high win rate
+		} else if valWinRate > 90.0 {
+			winRateScore = 0.9 - ((valWinRate - 90.0) / 100.0) // Medium penalty for extremely high win rate
+		} else if valWinRate >= 65.0 && valWinRate < 75.0 {
+			winRateScore = 0.9 - ((75.0 - valWinRate) / 100.0) // Small penalty for slightly low win rate
+		} else if valWinRate >= 50.0 && valWinRate < 65.0 {
+			winRateScore = 0.8 - ((65.0 - valWinRate) / 75.0) // Medium penalty for low win rate
+		} else if valWinRate >= 30.0 && valWinRate < 50.0 {
+			winRateScore = 0.5 - ((50.0 - valWinRate) / 100.0) // Large penalty for very low win rate
 		} else {
-			winRateScore = (valWinRate / 75.0) * 0.5 // Severe penalty for win rate below 50%
+			winRateScore = 0.3 * (valWinRate / 30.0) // Severe penalty for extremely low win rate
 		}
 		
-		combinedScore := ((trainSharpe + valSharpe) / 2) * activity * winRateScore
+		sharpeScore := (trainSharpe + valSharpe) / 2
+		if sharpeScore < 0 {
+			sharpeScore = 0.1 + (1.0 / (1.0 + math.Abs(sharpeScore)))
+		}
+		
+		combinedScore := sharpeScore * tradeFrequencyScore * winRateScore
 		
 		log.Info("Trial result",
 			zap.Int("trial", trial.ID),
 			zap.Float64("combined_score", combinedScore),
 			zap.Float64("trades_per_month", tradesPerMonth),
 			zap.Float64("win_rate", valWinRate),
-			zap.Float64("activity_score", activity),
+			zap.Float64("trade_frequency_score", tradeFrequencyScore),
 			zap.Float64("win_rate_score", winRateScore),
+			zap.Float64("sharpe_score", sharpeScore),
 			zap.Float64("train_max_dd", trainMaxDD),
 			zap.Float64("val_max_dd", valMaxDD),
 		)
