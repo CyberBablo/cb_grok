@@ -3,6 +3,7 @@ package strategy
 import (
 	"cb_grok/internal/indicators"
 	"cb_grok/pkg/models"
+	"math"
 )
 
 type MovingAverageStrategy struct{}
@@ -12,20 +13,23 @@ func NewMovingAverageStrategy() Strategy {
 }
 
 func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyParams) []models.AppliedOHLCV {
-	if len(candles) < max(params.MALongPeriod, params.EMALongPeriod, params.MACDLongPeriod, params.BollingerPeriod) {
+	// Обновлено условие: добавлен StochasticKPeriod для проверки минимальной длины данных
+	if len(candles) < max(params.MALongPeriod, params.EMALongPeriod, params.MACDLongPeriod, params.BollingerPeriod, params.StochasticKPeriod) {
 		return nil
 	}
 
+	// Рассчитываем ATR для адаптивных периодов
+	atr := indicators.CalculateATR(candles, params.ATRPeriod)
+
+	// Рассчитываем индикаторы с использованием статических периодов
 	shortMA := indicators.CalculateSMA(candles, params.MAShortPeriod)
 	longMA := indicators.CalculateSMA(candles, params.MALongPeriod)
 	rsi := indicators.CalculateRSI(candles, params.RSIPeriod)
-	atr := indicators.CalculateATR(candles, params.ATRPeriod)
 	emaShort := indicators.CalculateEMA(candles, params.EMAShortPeriod)
 	emaLong := indicators.CalculateEMA(candles, params.EMALongPeriod)
 	macd, macdSignal := indicators.CalculateMACD(candles, params.MACDShortPeriod, params.MACDLongPeriod, params.MACDSignalPeriod)
-
-	// Рассчитываем Bollinger Bands
 	upperBB, _, lowerBB := indicators.CalculateBollingerBands(candles, params.BollingerPeriod, params.BollingerStdDev)
+	stochasticK, stochasticD := indicators.CalculateStochasticOscillator(candles, params.StochasticKPeriod, params.StochasticDPeriod)
 
 	trend := make([]bool, len(candles))
 	volatility := make([]bool, len(candles))
@@ -50,11 +54,15 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 			MACDSignal: macdSignal[i],
 			UpperBB:    upperBB[i],
 			LowerBB:    lowerBB[i],
+			// Добавлены поля для Stochastic Oscillator
+			StochasticK: stochasticK[i],
+			StochasticD: stochasticD[i],
 		})
 	}
 
 	for i := 1; i < len(appliedCandles); i++ {
-		signals := Signals{EMASignal: 0, RSISignal: 0, MACDSignal: 0, TrendSignal: 0, BBSignal: 0}
+		// Добавлено поле StochasticSignal в инициализацию структуры Signals
+		signals := Signals{EMASignal: 0, RSISignal: 0, MACDSignal: 0, TrendSignal: 0, BBSignal: 0, StochasticSignal: 0}
 
 		if shortMA[i] > longMA[i] {
 			signals.EMASignal = 1
@@ -79,31 +87,38 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 			signals.RSISignal = -1
 		}
 
-		// Логика сигналов Bollinger Bands
 		if candles[i].Close < appliedCandles[i].LowerBB {
-			signals.BBSignal = 1 // Покупка
+			signals.BBSignal = 1
 		} else if candles[i].Close > appliedCandles[i].UpperBB {
-			signals.BBSignal = -1 // Продажа
-		} else {
-			signals.BBSignal = 0
+			signals.BBSignal = -1
 		}
 
-		totalWeight := params.RSIWeight + params.MACDWeight + params.TrendWeight + params.EMAWeight + params.BBWeight
+		// Добавлена логика сигналов для Stochastic Oscillator
+		if stochasticK[i] < 20 && stochasticK[i] > stochasticD[i] {
+			signals.StochasticSignal = 1 // Покупка при пересечении снизу вверх в зоне перепроданности
+		} else if stochasticK[i] > 80 && stochasticK[i] < stochasticD[i] {
+			signals.StochasticSignal = -1 // Продажа при пересечении сверху вниз в зоне перекупленности
+		}
+
+		// Обновлен расчет общего веса с учетом StochasticWeight
+		totalWeight := params.RSIWeight + params.MACDWeight + params.TrendWeight + params.EMAWeight + params.BBWeight + params.StochasticWeight
 		if totalWeight == 0 {
-			totalWeight = 1 // Избегаем деления на ноль
+			totalWeight = 1
 		}
 		params.RSIWeight = params.RSIWeight / totalWeight
 		params.TrendWeight = params.TrendWeight / totalWeight
 		params.MACDWeight = params.MACDWeight / totalWeight
 		params.EMAWeight = params.EMAWeight / totalWeight
 		params.BBWeight = params.BBWeight / totalWeight
+		params.StochasticWeight = params.StochasticWeight / totalWeight
 
-		signal :=
-			float64(signals.RSISignal)*params.RSIWeight +
-				float64(signals.MACDSignal)*params.MACDWeight +
-				float64(signals.TrendSignal)*params.TrendWeight +
-				float64(signals.EMASignal)*params.EMAWeight +
-				float64(signals.BBSignal)*params.BBWeight
+		// Добавлен вклад StochasticSignal в итоговый сигнал
+		signal := float64(signals.RSISignal)*params.RSIWeight +
+			float64(signals.MACDSignal)*params.MACDWeight +
+			float64(signals.TrendSignal)*params.TrendWeight +
+			float64(signals.EMASignal)*params.EMAWeight +
+			float64(signals.BBSignal)*params.BBWeight +
+			float64(signals.StochasticSignal)*params.StochasticWeight
 
 		signal = Tanh(signal)
 
@@ -123,6 +138,30 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 	return appliedCandles
 }
 
+func calculateATRMean(atr []float64) float64 {
+	if len(atr) == 0 {
+		return 0
+	}
+	sum := 0.0
+	for _, v := range atr {
+		sum += v
+	}
+	return sum / float64(len(atr))
+}
+
+func adjustPeriod(basePeriod int, atr []float64, atrMean float64) int {
+	if atrMean == 0 || len(atr) == 0 {
+		return basePeriod
+	}
+	// Адаптация периода: увеличиваем при высокой волатильности
+	adjustment := 1 + (atr[len(atr)-1] / atrMean)
+	adjusted := int(math.Round(float64(basePeriod) * adjustment))
+	if adjusted < 1 {
+		adjusted = 1
+	}
+	return adjusted
+}
+
 /*
 
 package strategy
@@ -130,30 +169,20 @@ package strategy
 import (
 	"cb_grok/internal/indicators"
 	"cb_grok/pkg/models"
+	"math"
 )
 
-func max(a, b, c, d int) int {
-	if a >= b && a >= c && a >= d {
-		return a
-	}
-	if b >= a && b >= c && b >= d {
-		return b
-	}
-	if c >= a && c >= b && c >= d {
-		return c
-	}
-	return d
-}
-
-func Tanh(x float64) float64 {
-	return (2 / (1 + Exp(-2*x))) - 1
-}
-
-func Exp(x float64) float64 {
-	return 2.71828182845904523536028747135266250 // Примерная реализация, замените на math.Exp при необходимости
-}
-
 type MovingAverageStrategy struct{}
+
+func NewMovingAverageStrategy() Strategy {
+	return &MovingAverageStrategy{}
+}
+
+
+
+
+
+
 
 
 */
