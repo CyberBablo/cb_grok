@@ -47,7 +47,7 @@ func runOptimization(
 
 	ex, err := exchange.NewBinance(false, cfg.Binance.ApuPublic, cfg.Binance.ApiSecret, cfg.Binance.ProxyUrl)
 	if err != nil {
-		log.Error("optimize: initialize Bybit exchange", zap.Error(err))
+		log.Error("optimize: initialize Binance exchange", zap.Error(err))
 		return err
 	}
 

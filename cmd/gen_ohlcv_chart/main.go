@@ -13,7 +13,7 @@ import (
 func main() {
 	log := logger.NewLogger()
 
-	ex, err := exchange.NewBinance(false, "", "")
+	ex, err := exchange.NewBinance(false, "", "", "")
 	if err != nil {
 		log.Error("optimize: initialize Bybit exchange", zap.Error(err))
 		return
@@ -63,5 +63,8 @@ func main() {
 		UseRepoAssets() // serving assets file from current repo, avoid network access
 
 	c := tachart.New(*cfg)
-	c.GenStatic(chartCandles, events, "kline.html")
+	err = c.GenStatic(chartCandles, events, "kline.html")
+	if err != nil {
+		panic(err)
+	}
 }
