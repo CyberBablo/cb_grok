@@ -21,6 +21,7 @@ type StrategyParams struct {
 	EMALongPeriod        int
 	UseTrendFilter       bool
 	UseRSIFilter         bool
+	UseADXFilter         bool
 	ATRThreshold         float64
 	ADXPeriod            int
 	ADXThreshold         float64
