@@ -249,8 +249,12 @@ func runOptimization(
 			winRateScore = 0.9 // Small penalty for too high win rate
 		} else if valWinRate >= 70.0 {
 			winRateScore = 0.8 // Penalty for win rate below target
+		} else if valWinRate >= 60.0 {
+			winRateScore = 0.7 // Higher penalty for win rate below 70%
+		} else if valWinRate >= 50.0 {
+			winRateScore = 0.5 // Significant penalty for win rate below 60%
 		} else {
-			winRateScore = valWinRate / 75.0 // Linear penalty for low win rate
+			winRateScore = (valWinRate / 75.0) * 0.5 // Severe penalty for win rate below 50%
 		}
 		
 		combinedScore := ((trainSharpe + valSharpe) / 2) * activity * winRateScore
@@ -306,6 +310,15 @@ func runOptimization(
 		MACDShortPeriod:      bestParams["macd_short_period"].(int),
 		MACDLongPeriod:       bestParams["macd_long_period"].(int),
 		MACDSignalPeriod:     bestParams["macd_signal_period"].(int),
+		
+		MAWeight:             bestParams["ma_weight"].(float64),
+		MACDWeight:           bestParams["macd_weight"].(float64),
+		RSIWeight:            bestParams["rsi_weight"].(float64),
+		ADXWeight:            bestParams["adx_weight"].(float64),
+		TrendWeight:          bestParams["trend_weight"].(float64),
+		
+		BuyThreshold:         bestParams["buy_threshold"].(float64),
+		SellThreshold:        bestParams["sell_threshold"].(float64),
 	}
 
 	valSharpe, orders, capital, valMaxDD, valWinRate, err := bt.Run(validationCandles, bestStrategyParams)
