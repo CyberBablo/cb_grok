@@ -32,15 +32,20 @@ type StrategyParams struct {
 	BollingerStdDev     float64 `json:"bollinger_std_dev,omitempty"`
 	BBWeight            float64 `json:"bb_weight,omitempty"`
 
+	StochasticKPeriod int     `json:"stochastic_k_period,omitempty"` // Период для %K
+	StochasticDPeriod int     `json:"stochastic_d_period,omitempty"` // Период для %D
+	StochasticWeight  float64 `json:"stochastic_weight,omitempty"`   // Вес для сигнала
+
 	Pair string `json:"pair,omitempty"`
 }
 
 type Signals struct {
-	EMASignal   int
-	RSISignal   int
-	MACDSignal  int
-	TrendSignal int
-	BBSignal    int
+	EMASignal        int
+	RSISignal        int
+	MACDSignal       int
+	TrendSignal      int
+	BBSignal         int
+	StochasticSignal int // Сигнал от Stochastic
 }
 
 func Tanh(x float64) float64 {

@@ -11,19 +11,21 @@ type OHLCV struct {
 
 type AppliedOHLCV struct {
 	OHLCV
-	ATR        float64
-	RSI        float64
-	ShortMA    float64
-	LongMA     float64
-	ShortEMA   float64
-	LongEMA    float64
-	Trend      bool
-	Volatility bool
-	ADX        float64
-	MACD       float64
-	MACDSignal float64
-	Signal     int
-	Position   int
-	UpperBB    float64
-	LowerBB    float64
+	ATR         float64
+	RSI         float64
+	ShortMA     float64
+	LongMA      float64
+	ShortEMA    float64
+	LongEMA     float64
+	Trend       bool
+	Volatility  bool
+	ADX         float64
+	MACD        float64
+	MACDSignal  float64
+	Signal      int
+	Position    int
+	UpperBB     float64
+	LowerBB     float64
+	StochasticK float64 // Значение %K
+	StochasticD float64 // Значение %D
 }

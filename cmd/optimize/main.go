@@ -51,9 +51,9 @@ func runOptimization(
 		return err
 	}
 
-	pair := "XRP/USDT"
+	pair := "ETH/USDT"
 
-	candles, err := ex.FetchOHLCV(pair, "30m", 10000)
+	candles, err := ex.FetchOHLCV(pair, "1h", 10000)
 	if err != nil {
 		log.Error("optimize: fetch OHLCV", zap.Error(err))
 		return err
@@ -178,6 +178,19 @@ func runOptimization(
 			return 0, err
 		}
 
+		stochasticKPeriod, err := trial.SuggestInt("stochastic_k_period", 5, 20)
+		if err != nil {
+			return 0, err
+		}
+		stochasticDPeriod, err := trial.SuggestInt("stochastic_d_period", 3, 10)
+		if err != nil {
+			return 0, err
+		}
+		stochasticWeight, err := trial.SuggestFloat("stochastic_weight", 0, 1)
+		if err != nil {
+			return 0, err
+		}
+
 		params := strategy.StrategyParams{
 			MAShortPeriod:       maShortPeriod,
 			MALongPeriod:        maLongPeriod,
@@ -200,6 +213,9 @@ func runOptimization(
 			BollingerPeriod:     bollingerPeriod,
 			BollingerStdDev:     bollingerStdDev,
 			BBWeight:            bbWeight,
+			StochasticDPeriod:   stochasticDPeriod,
+			StochasticKPeriod:   stochasticKPeriod,
+			StochasticWeight:    stochasticWeight,
 			Pair:                pair,
 		}
 
@@ -230,7 +246,7 @@ func runOptimization(
 		return combinedSharpe, nil
 	}
 
-	err = study.Optimize(objective, 7550)
+	err = study.Optimize(objective, 33123)
 	if err != nil {
 		log.Error("optimize: study optimize", zap.Error(err))
 		return err
@@ -269,6 +285,9 @@ func runOptimization(
 		BollingerPeriod:     bestParams["bollinger_period"].(int),
 		BollingerStdDev:     bestParams["bollinger_std_dev"].(float64),
 		BBWeight:            bestParams["bb_weight"].(float64),
+		StochasticKPeriod:   bestParams["stochastic_k_period"].(int),
+		StochasticDPeriod:   bestParams["stochastic_d_period"].(int),
+		StochasticWeight:    bestParams["stochastic_weight"].(float64),
 		Pair:                pair,
 	}
 
