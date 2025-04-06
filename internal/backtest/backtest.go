@@ -38,8 +38,8 @@ func NewBacktest() Backtest {
 		Commission:           0.001,  // 0.1%
 		SlippagePercent:      0.001,  // 0.1%
 		Spread:               0.0002, // 0.02%
-		StopLossMultiplier:   1.5,
-		TakeProfitMultiplier: 3.0,
+		StopLossMultiplier:   5,
+		TakeProfitMultiplier: 5,
 	}
 }
 
@@ -91,8 +91,8 @@ func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams)
 			position = capital / buyPrice * (1 - b.Commission)
 			capital = 0
 			entryPrice = buyPrice
-			stopLoss = entryPrice - atr*params.StopLossMultiplier
-			takeProfit = entryPrice + atr*params.TakeProfitMultiplier
+			stopLoss = entryPrice - atr*b.StopLossMultiplier
+			takeProfit = entryPrice + atr*b.TakeProfitMultiplier
 			orders = append(orders, Order{Action: "buy", Amount: position, Price: buyPrice, Timestamp: timestamp})
 		} else if signal == -1 && position > 0 {
 			sellPrice := nextOpen * (1 - b.SlippagePercent - b.Spread)

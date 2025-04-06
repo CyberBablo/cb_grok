@@ -22,7 +22,6 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 	atr := indicators.CalculateATR(candles, params.ATRPeriod)
 	emaShort := indicators.CalculateEMA(candles, params.EMAShortPeriod)
 	emaLong := indicators.CalculateEMA(candles, params.EMALongPeriod)
-	// adx := indicators.CalculateADX(candles, params.ADXPeriod) // Временно исключено
 	macd, macdSignal := indicators.CalculateMACD(candles, params.MACDShortPeriod, params.MACDLongPeriod, params.MACDSignalPeriod)
 
 	trend := make([]bool, len(candles))
@@ -44,36 +43,64 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 			LongEMA:    emaLong[i],
 			Trend:      trend[i],
 			Volatility: volatility[i],
-			// ADX:        adx[i], // Временно исключено
 			MACD:       macd[i],
 			MACDSignal: macdSignal[i],
 		})
 	}
 
 	for i := 1; i < len(appliedCandles); i++ {
-		// buyCondition := shortMA[i] > longMA[i] && macd[i] > macdSignal[i] && adx[i] > params.ADXThreshold
-		// sellCondition := shortMA[i] < longMA[i] && macd[i] < macdSignal[i] && adx[i] > params.ADXThreshold
-		// Временно исключаем ADX из условий
-		buyCondition := shortMA[i] > longMA[i] && macd[i] > macdSignal[i]
-		sellCondition := shortMA[i] < longMA[i] && macd[i] < macdSignal[i]
+		signals := Signals{EMASignal: 0, RSISignal: 0, MACDSignal: 0, TrendSignal: 0}
 
-		if params.UseRSIFilter {
-			buyCondition = buyCondition && rsi[i] < params.BuyRSIThreshold
-			sellCondition = sellCondition && rsi[i] > params.SellRSIThreshold
+		if shortMA[i] > longMA[i] {
+			signals.EMASignal = 1
+		} else if shortMA[i] < longMA[i] {
+			signals.EMASignal = -1
+		}
+		if macd[i] > macdSignal[i] {
+			signals.MACDSignal = 1
+		} else if macd[i] < macdSignal[i] {
+			signals.MACDSignal = -1
 		}
 
-		if params.UseTrendFilter {
-			buyCondition = buyCondition && trend[i] && volatility[i]
-			sellCondition = sellCondition && !trend[i] && volatility[i]
+		if trend[i] && volatility[i] {
+			signals.TrendSignal = 1
+		} else if !trend[i] && volatility[i] {
+			signals.TrendSignal = -1
 		}
 
-		if buyCondition {
+		if rsi[i] < params.BuyRSIThreshold {
+			signals.RSISignal = 1
+		} else if rsi[i] > params.SellRSIThreshold {
+			signals.RSISignal = -1
+		}
+
+		totalWeight := params.RSIWeight + params.MACDWeight + params.TrendWeight + params.EMAWeight
+		params.RSIWeight = params.RSIWeight / totalWeight
+		params.TrendWeight = params.TrendWeight / totalWeight
+		params.MACDWeight = params.MACDWeight / totalWeight
+		params.EMAWeight = params.EMAWeight / totalWeight
+
+		signal :=
+			float64(signals.RSISignal)*params.RSIWeight +
+				float64(signals.MACDSignal)*params.MACDWeight +
+				float64(signals.TrendSignal)*params.TrendWeight +
+				float64(signals.EMASignal)*params.EMAWeight
+
+		signal = Tanh(signal)
+
+		if signal > params.BuySignalThreshold {
+			//fmt.Println("SIGNAL", signal, params.BuySignalThreshold, params.SellSignalThreshold)
 			appliedCandles[i].Signal = 1
-		} else if sellCondition {
+		} else if signal < params.SellSignalThreshold {
+			//fmt.Println("SIGNAL", signal, params.BuySignalThreshold, params.SellSignalThreshold)
+
 			appliedCandles[i].Signal = -1
 		} else {
 			appliedCandles[i].Signal = 0
 		}
+		//fmt.Println("SIGNALS", signals, signal)
+		//fmt.Println("WEIGHTS", params.RSIWeight, params.MACDWeight, params.TrendWeight, params.EMAWeight)
+		//fmt.Println("FINAL SIGNAL", appliedCandles[i].Signal)
 
 		if i > 0 {
 			appliedCandles[i].Position = appliedCandles[i].Signal - appliedCandles[i-1].Signal
