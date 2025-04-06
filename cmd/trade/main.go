@@ -22,6 +22,11 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	stopLossMultiplier    = 5
+	takeProfitsMultiplier = 5
+)
+
 func main() {
 	fx.New(
 		logger.Module,
@@ -185,8 +190,8 @@ func runLiveTrading(log *zap.Logger, tg *telegram.TelegramService) error {
 
 			positionOpen = true
 			entryPrice = currentPrice
-			stopLoss = entryPrice - atr*strategyParams.StopLossMultiplier
-			takeProfit = entryPrice + atr*strategyParams.TakeProfitMultiplier
+			stopLoss = entryPrice - atr*stopLossMultiplier
+			takeProfit = entryPrice + atr*takeProfitsMultiplier
 		}
 
 		if err != nil {

@@ -24,4 +24,6 @@ type AppliedOHLCV struct {
 	MACDSignal float64
 	Signal     int
 	Position   int
+	UpperBB    float64
+	LowerBB    float64
 }
