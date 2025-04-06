@@ -6,6 +6,8 @@ require (
 	github.com/c-bata/goptuna v0.9.0
 	github.com/ccxt/ccxt/go/v4 v4.4.70
 	github.com/cinar/indicator v1.3.0
+	github.com/fatih/structs v1.1.0
+	github.com/gorilla/websocket v1.4.2
 	github.com/iamjinlei/go-tachart v0.0.0-20210729041122-12052a3368c8
 	github.com/samber/lo v1.49.1
 	github.com/tucnak/telebot v2.0.0+incompatible
@@ -40,6 +42,5 @@ require (
 	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
-	gonum.org/v1/gonum v0.14.0 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )

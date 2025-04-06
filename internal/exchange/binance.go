@@ -27,6 +27,10 @@ func NewBinance(isDemo bool, apiKey, apiSecret string, proxyUrl string) (Exchang
 	return &binanceImpl{ex: ex, log: logger.GetInstance()}, nil
 }
 
+func (e *binanceImpl) CreateOrder(symbol, side string, amount float64, stopLoss, takeProfit float64) error {
+	return nil
+}
+
 func (e *binanceImpl) FetchOHLCV(symbol string, timeframe string, total int) ([]models.OHLCV, error) {
 	limit := 1000
 

@@ -6,17 +6,14 @@ import (
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/strategy"
 	"cb_grok/internal/telegram"
+	"cb_grok/internal/trading_model"
 	"cb_grok/internal/utils/logger"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/c-bata/goptuna"
 	"github.com/samber/lo"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
-	"os"
-	"path/filepath"
-	"time"
 )
 
 func main() {
@@ -36,8 +33,12 @@ func runOptimization(
 	tg *telegram.TelegramService,
 	cfg config.Config,
 ) error {
-	var validationSetDays int
+	var (
+		validationSetDays int
+		symbol            string
+	)
 	flag.IntVar(&validationSetDays, "val-set-days", 0, "Number of days for validation set")
+	flag.StringVar(&symbol, "symbol", "", "Symbol (f.e BNB/USDT)")
 	flag.Parse()
 
 	if validationSetDays <= 0 {
@@ -51,7 +52,7 @@ func runOptimization(
 		return err
 	}
 
-	candles, err := ex.FetchOHLCV("BNB/USDT", "30m", 10000)
+	candles, err := ex.FetchOHLCV(symbol, "30m", 5000)
 	if err != nil {
 		log.Error("optimize: fetch OHLCV", zap.Error(err))
 		return err
@@ -247,31 +248,12 @@ func runOptimization(
 		return err
 	}
 
-	dir := "lib/best_models"
-	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
-		log.Error("optimize: create dir", zap.Error(err))
-		return err
-	}
+	filename := trading_model.SaveModel(symbol, bestStrategyParams)
 
-	timestamp := time.Now().Format("20060102_150405")
-	filename := filepath.Join(dir, fmt.Sprintf("model_%s.json", timestamp))
-	file, err := os.Create(filename)
-	if err != nil {
-		log.Error("optimize: create new model file", zap.Error(err))
-		return err
-	}
-	defer file.Close()
-
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(bestParams); err != nil {
-		log.Error("optimize: model file encoder", zap.Error(err))
-		return err
-	}
 	orderCount := len(orders)
 	result := fmt.Sprintf(
-		"Оптимизация завершена.\nКоличество сделок: %d\nКомбинированный Sharpe Ratio: %.2f\nВалидационный Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
-		orderCount, combinedSharpeRatio, valSharpe, capital, valMaxDD, valWinRate, filename)
+		"Оптимизация завершена.\nСимвол: %s\nКоличество сделок: %d\nКомбинированный Sharpe Ratio: %.2f\nВалидационный Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
+		symbol, orderCount, combinedSharpeRatio, valSharpe, capital, valMaxDD, valWinRate, filename)
 
 	log.Info("optimization completed",
 		zap.Float64("combined_sharpe_ratio", combinedSharpeRatio),
@@ -280,6 +262,6 @@ func runOptimization(
 		zap.Float64("validation_win_rate", valWinRate),
 		zap.String("filename", filename))
 	tg.SendMessage(result)
-	os.Exit(0)
+
 	return nil
 }

@@ -26,6 +26,10 @@ func NewBybit(isDemo bool, apiKey, apiSecret string) (Exchange, error) {
 	return &bybitImpl{ex: ex, log: logger.GetInstance()}, nil
 }
 
+func (e *bybitImpl) CreateOrder(symbol, side string, amount float64, stopLoss, takeProfit float64) error {
+	return nil
+}
+
 func (e *bybitImpl) FetchOHLCV(symbol string, timeframe string, total int) ([]models.OHLCV, error) {
 	limit := 1000
 
