@@ -51,11 +51,13 @@ func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyPar
 	}
 
 	for i := 1; i < len(appliedCandles); i++ {
-		buyCondition := shortMA[i] > longMA[i] && macd[i] > macdSignal[i] && adx[i] > params.ADXThreshold
-		sellCondition := shortMA[i] < longMA[i] && macd[i] < macdSignal[i] && adx[i] > params.ADXThreshold
-
-		// buyCondition := shortMA[i] > longMA[i] && macd[i] > macdSignal[i]
-		// sellCondition := shortMA[i] < longMA[i] && macd[i] < macdSignal[i]
+		buyCondition := shortMA[i] > longMA[i] && macd[i] > macdSignal[i]
+		sellCondition := shortMA[i] < longMA[i] && macd[i] < macdSignal[i]
+		
+		if params.UseADXFilter {
+			buyCondition = buyCondition && adx[i] > params.ADXThreshold
+			sellCondition = sellCondition && adx[i] > params.ADXThreshold
+		}
 
 		if params.UseRSIFilter {
 			buyCondition = buyCondition && rsi[i] < params.BuyRSIThreshold
