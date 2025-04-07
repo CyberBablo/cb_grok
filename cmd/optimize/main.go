@@ -8,12 +8,15 @@ import (
 	"cb_grok/internal/telegram"
 	"cb_grok/internal/utils"
 	"cb_grok/internal/utils/logger"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/c-bata/goptuna"
+	"github.com/c-bata/goptuna/tpe"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	"math"
 	"os"
 	"path/filepath"
@@ -40,8 +43,13 @@ func runOptimization(
 	var validationSetDays int
 	var pair string
 	var timeDelta string
-
+	var trials int
+	var dataSetCandles int
+	var workers int
+	flag.IntVar(&trials, "trials", 30000, "Number of trials")
 	flag.IntVar(&validationSetDays, "val-set-days", 0, "Number of days for validation set")
+	flag.IntVar(&dataSetCandles, "dataset-candles", 1000, "Number of dataset Candles")
+	flag.IntVar(&workers, "workers", 2, "Number of parallel workers")
 	flag.StringVar(&pair, "trade-pair", "BTC/USDT", "Number of days for validation set")
 	flag.StringVar(&timeDelta, "time-delta", "", "Time delta for validation set")
 	flag.Parse()
@@ -58,13 +66,15 @@ func runOptimization(
 	}
 
 	secondsOfDelta := utils.TimeframeToMilliseconds(timeDelta) / 1000
+	timePeriodMultiplier := float64(60 * 60 / secondsOfDelta)
 	candlesPerDay := (24 * 60 * 60) / int(secondsOfDelta)
-	candles, err := ex.FetchOHLCV(pair, timeDelta, 10000)
+	candles, err := ex.FetchOHLCV(pair, timeDelta, dataSetCandles)
 	if err != nil {
 		log.Error("optimize: fetch OHLCV", zap.Error(err))
 		return err
 	}
-
+	fmt.Println("multiplier", timePeriodMultiplier)
+	//os.Exit(0)
 	log.Info("optimize: OHLCV data", zap.Int("length", len(candles)))
 
 	validationCandlesCount := validationSetDays * candlesPerDay
@@ -84,6 +94,7 @@ func runOptimization(
 	study, err := goptuna.CreateStudy(
 		"strategy_1",
 		goptuna.StudyOptionDirection(goptuna.StudyDirectionMaximize),
+		goptuna.StudyOptionSampler(tpe.NewSampler()),
 	)
 	if err != nil {
 		log.Error("optimize: create study", zap.Error(err))
@@ -91,19 +102,19 @@ func runOptimization(
 	}
 
 	objective := func(trial goptuna.Trial) (float64, error) {
-		maShortPeriod, err := trial.SuggestInt("ma_short_period", 5, 60)
+		maShortPeriod, err := trial.SuggestStepInt("ma_short_period", 5, 30*int(timePeriodMultiplier), int(timePeriodMultiplier))
 		if err != nil {
 			return 0, err
 		}
-		maLongPeriod, err := trial.SuggestInt("ma_long_period", 20, 200)
+		maLongPeriod, err := trial.SuggestStepInt("ma_long_period", 20, 100*int(timePeriodMultiplier), int(timePeriodMultiplier))
 		if err != nil {
 			return 0, err
 		}
-		rsiPeriod, err := trial.SuggestInt("rsi_period", 5, 40)
+		rsiPeriod, err := trial.SuggestStepInt("rsi_period", 5, 20*int(timePeriodMultiplier), int(timePeriodMultiplier))
 		if err != nil {
 			return 0, err
 		}
-		atrPeriod, err := trial.SuggestInt("atr_period", 5, 40)
+		atrPeriod, err := trial.SuggestStepInt("atr_period", 5, 20*int(timePeriodMultiplier), int(timePeriodMultiplier))
 		if err != nil {
 			return 0, err
 		}
@@ -115,11 +126,11 @@ func runOptimization(
 		if err != nil {
 			return 0, err
 		}
-		emaShortPeriod, err := trial.SuggestInt("ema_short_period", 10, 100)
+		emaShortPeriod, err := trial.SuggestStepInt("ema_short_period", 10, 50*int(timePeriodMultiplier), int(timePeriodMultiplier))
 		if err != nil {
 			return 0, err
 		}
-		emaLongPeriod, err := trial.SuggestInt("ema_long_period", 50, 400)
+		emaLongPeriod, err := trial.SuggestStepInt("ema_long_period", 50, 200*int(timePeriodMultiplier), int(timePeriodMultiplier))
 		if err != nil {
 			return 0, err
 		}
@@ -127,15 +138,15 @@ func runOptimization(
 		if err != nil {
 			return 0, err
 		}
-		macdShortPeriod, err := trial.SuggestInt("macd_short_period", 5, 15)
+		macdShortPeriod, err := trial.SuggestStepInt("macd_short_period", 5, 15*int(timePeriodMultiplier), int(timePeriodMultiplier))
 		if err != nil {
 			return 0, err
 		}
-		macdLongPeriod, err := trial.SuggestInt("macd_long_period", 20, 50)
+		macdLongPeriod, err := trial.SuggestStepInt("macd_long_period", 20, 50*int(timePeriodMultiplier), int(timePeriodMultiplier))
 		if err != nil {
 			return 0, err
 		}
-		macdSignalPeriod, err := trial.SuggestInt("macd_signal_period", 5, 15)
+		macdSignalPeriod, err := trial.SuggestStepInt("macd_signal_period", 5, 15*int(timePeriodMultiplier), int(timePeriodMultiplier))
 		if err != nil {
 			return 0, err
 		}
@@ -170,7 +181,7 @@ func runOptimization(
 			return 0, err
 		}
 
-		bollingerPeriod, err := trial.SuggestInt("bollinger_period", 10, 50)
+		bollingerPeriod, err := trial.SuggestStepInt("bollinger_period", 10, 50*int(timePeriodMultiplier), int(timePeriodMultiplier))
 		if err != nil {
 			return 0, err
 		}
@@ -183,11 +194,11 @@ func runOptimization(
 			return 0, err
 		}
 
-		stochasticKPeriod, err := trial.SuggestInt("stochastic_k_period", 5, 20)
+		stochasticKPeriod, err := trial.SuggestStepInt("stochastic_k_period", 5, 20*int(timePeriodMultiplier), int(timePeriodMultiplier))
 		if err != nil {
 			return 0, err
 		}
-		stochasticDPeriod, err := trial.SuggestInt("stochastic_d_period", 3, 10)
+		stochasticDPeriod, err := trial.SuggestStepInt("stochastic_d_period", 3, 10*int(timePeriodMultiplier), int(timePeriodMultiplier))
 		if err != nil {
 			return 0, err
 		}
@@ -251,9 +262,17 @@ func runOptimization(
 		return combinedSharpe, nil
 	}
 
-	err = study.Optimize(objective, 33123)
-	if err != nil {
-		log.Error("optimize: study optimize", zap.Error(err))
+	eg, ctx := errgroup.WithContext(context.Background())
+	study.WithContext(ctx)
+
+	for i := 0; i < workers; i++ {
+		eg.Go(func() error {
+			return study.Optimize(objective, trials/workers)
+		})
+	}
+
+	if err = eg.Wait(); err != nil {
+		log.Error("Optimize error %v", zap.Error(err))
 		return err
 	}
 
@@ -329,8 +348,8 @@ func runOptimization(
 	}
 	orderCount := len(orders)
 	result := fmt.Sprintf(
-		"Ветка DEVX\nПара: %s\nКоличество дней на валидации: %d\nТаймдельта: %s\nКоличество свечей в сутках: %d\nКоличество сделок: %d\nКомбинированный Sharpe Ratio: %.2f\nВалидационный Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
-		pair, validationSetDays, timeDelta, candlesPerDay, orderCount, combinedSharpeRatio, valSharpe, capital, valMaxDD, valWinRate, filename)
+		"Ветка DEVX\nПара: %s\nКоличество trials: %d\nКоличество дней на валидации: %d\nТаймдельта: %s\nКоличество свечей в сутках: %d\nКоличество сделок: %d\nКомбинированный Sharpe Ratio: %.2f\nВалидационный Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
+		pair, trials, validationSetDays, timeDelta, candlesPerDay, orderCount, combinedSharpeRatio, valSharpe, capital, valMaxDD, valWinRate, filename)
 
 	log.Info("optimization completed",
 		zap.Float64("combined_sharpe_ratio", combinedSharpeRatio),
