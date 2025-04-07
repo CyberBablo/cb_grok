@@ -6,6 +6,7 @@ import (
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/strategy"
 	"cb_grok/internal/telegram"
+	"cb_grok/internal/utils"
 	"cb_grok/internal/utils/logger"
 	"encoding/json"
 	"flag"
@@ -37,7 +38,12 @@ func runOptimization(
 	cfg config.Config,
 ) error {
 	var validationSetDays int
+	var pair string
+	var timeDelta string
+
 	flag.IntVar(&validationSetDays, "val-set-days", 0, "Number of days for validation set")
+	flag.StringVar(&pair, "trade-pair", "BTC/USDT", "Number of days for validation set")
+	flag.StringVar(&timeDelta, "time-delta", "", "Time delta for validation set")
 	flag.Parse()
 
 	if validationSetDays <= 0 {
@@ -51,9 +57,9 @@ func runOptimization(
 		return err
 	}
 
-	pair := "BNB/USDT"
-
-	candles, err := ex.FetchOHLCV(pair, "1h", 10000)
+	secondsOfDelta := utils.TimeframeToMilliseconds(timeDelta) / 1000
+	candlesPerDay := (24 * 60 * 60) / int(secondsOfDelta)
+	candles, err := ex.FetchOHLCV(pair, timeDelta, 10000)
 	if err != nil {
 		log.Error("optimize: fetch OHLCV", zap.Error(err))
 		return err
@@ -61,7 +67,6 @@ func runOptimization(
 
 	log.Info("optimize: OHLCV data", zap.Int("length", len(candles)))
 
-	candlesPerDay := 48
 	validationCandlesCount := validationSetDays * candlesPerDay
 
 	if validationCandlesCount >= len(candles) {
@@ -324,8 +329,8 @@ func runOptimization(
 	}
 	orderCount := len(orders)
 	result := fmt.Sprintf(
-		"Ветка DEVX\nПара: %s\nОптимизация завершена.\nКоличество сделок: %d\nКомбинированный Sharpe Ratio: %.2f\nВалидационный Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
-		pair, orderCount, combinedSharpeRatio, valSharpe, capital, valMaxDD, valWinRate, filename)
+		"Ветка DEVX\nПара: %s\nКоличество дней на валидации: %d\nТаймдельта: %s\nКоличество свечей в сутках: %d\nКоличество сделок: %d\nКомбинированный Sharpe Ratio: %.2f\nВалидационный Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
+		pair, validationSetDays, timeDelta, candlesPerDay, orderCount, combinedSharpeRatio, valSharpe, capital, valMaxDD, valWinRate, filename)
 
 	log.Info("optimization completed",
 		zap.Float64("combined_sharpe_ratio", combinedSharpeRatio),
