@@ -51,7 +51,7 @@ func runOptimization(
 		return err
 	}
 
-	pair := "ETH/USDT"
+	pair := "BNB/USDT"
 
 	candles, err := ex.FetchOHLCV(pair, "1h", 10000)
 	if err != nil {

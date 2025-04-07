@@ -6,13 +6,13 @@ import (
 	"math"
 )
 
-type MovingAverageStrategy struct{}
+type LinearBiasStrategy struct{}
 
-func NewMovingAverageStrategy() Strategy {
-	return &MovingAverageStrategy{}
+func NewLinearBiasStrategy() Strategy {
+	return &LinearBiasStrategy{}
 }
 
-func (s *MovingAverageStrategy) Apply(candles []models.OHLCV, params StrategyParams) []models.AppliedOHLCV {
+func (s *LinearBiasStrategy) Apply(candles []models.OHLCV, params StrategyParams) []models.AppliedOHLCV {
 	// Обновлено условие: добавлен StochasticKPeriod для проверки минимальной длины данных
 	if len(candles) < max(params.MALongPeriod, params.EMALongPeriod, params.MACDLongPeriod, params.BollingerPeriod, params.StochasticKPeriod) {
 		return nil
@@ -172,10 +172,10 @@ import (
 	"math"
 )
 
-type MovingAverageStrategy struct{}
+type LinearBiasStrategy struct{}
 
-func NewMovingAverageStrategy() Strategy {
-	return &MovingAverageStrategy{}
+func NewLinearBiasStrategy() Strategy {
+	return &LinearBiasStrategy{}
 }
 
 

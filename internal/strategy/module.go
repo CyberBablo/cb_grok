@@ -5,5 +5,5 @@ import (
 )
 
 var Module = fx.Module("strategy",
-	fx.Provide(NewMovingAverageStrategy),
+	fx.Provide(NewLinearBiasStrategy),
 )
