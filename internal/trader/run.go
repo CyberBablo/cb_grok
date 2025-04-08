@@ -30,13 +30,16 @@ func (t *trader) Run(mode TradeMode) error {
 
 	t.log.Info("connected to websocket", zap.String("url", wsUrl))
 
+	b, _ := json.MarshalIndent(t.model, "", "    ")
+	fmt.Printf("Use model:\n%+v\n", string(b))
+
 	// --------------------------------------------------------------
 
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil && websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 			t.log.Info("WebSocket closed normally", zap.Error(err))
-			t.tg.SendMessage("Симуляция завершена")
+			//t.tg.SendMessage("Симуляция завершена")
 			break
 		}
 		if err != nil {
@@ -52,11 +55,18 @@ func (t *trader) Run(mode TradeMode) error {
 			continue
 		}
 
-		err = t.algo(candle)
+		fmt.Printf(">>>>> %s\n", string(message))
+
+		action, err := t.algo(candle)
 		if err != nil {
 			t.log.Error("trade algo error", zap.Error(err), zap.String("message", string(message)))
 			t.tg.SendMessage(fmt.Sprintf("trade algo error: %s\n\nMessage: %s", err.Error(), string(message)))
 		}
+
+		b, _ := json.Marshal(action)
+
+		fmt.Printf("%s\n\n", string(b))
+
 	}
 
 	t.log.Info("simulation results", zap.Int("num_events", len(t.state.events)))

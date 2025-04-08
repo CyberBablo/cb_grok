@@ -2,29 +2,29 @@ package trader
 
 import (
 	"cb_grok/pkg/models"
+	"encoding/json"
 	"fmt"
 	"go.uber.org/zap"
 	"strings"
 )
 
-func (t *trader) algo(candle models.OHLCV) error {
+func (t *trader) algo(candle models.OHLCV) (*Action, error) {
 	requiredCandles := max(t.model.EMALongPeriod, t.model.MALongPeriod, t.model.MACDLongPeriod, t.model.ATRPeriod, t.model.RSIPeriod)
 
 	t.state.ohlcv = append(t.state.ohlcv, candle)
 	if len(t.state.ohlcv) < requiredCandles {
-		return nil
+		return nil, nil
 	}
 
 	appliedOHLCV := t.strategy.Apply(t.state.ohlcv, t.model.StrategyParams)
 	if appliedOHLCV == nil {
-		return fmt.Errorf("strategy application failed")
+		return nil, fmt.Errorf("strategy application failed")
 	}
 
 	currentCandle := appliedOHLCV[len(appliedOHLCV)-1]
 
-	if currentCandle.Signal == 1 {
-		fmt.Printf("%+v\n\n", currentCandle)
-	}
+	b, _ := json.Marshal(currentCandle)
+	fmt.Printf("<<<<< %s\n", string(b))
 
 	currentSignal := currentCandle.Signal
 	currentPrice := currentCandle.Close
@@ -104,7 +104,7 @@ func (t *trader) algo(candle models.OHLCV) error {
 
 	portfolioValue := t.state.cash + t.state.assets*currentPrice
 
-	action := Event{
+	action := Action{
 		Timestamp:       currentCandle.Timestamp,
 		Decision:        decision,
 		DecisionTrigger: decisionTrigger,
@@ -123,9 +123,9 @@ func (t *trader) algo(candle models.OHLCV) error {
 	//	zap.Float64("portfolio_usdt", action.PortfolioValue),
 	//)
 
-	if decision != DecisionHold {
+	if action.Decision != DecisionHold {
 		t.state.events = append(t.state.events, action)
 	}
 
-	return nil
+	return &action, nil
 }

@@ -27,7 +27,7 @@ type traderState struct {
 	initialCapital float64
 
 	ohlcv  []models.OHLCV
-	events []Event
+	events []Action
 
 	cash           float64
 	assets         float64
@@ -37,7 +37,7 @@ type traderState struct {
 	takeProfit     float64
 }
 
-type Event struct {
+type Action struct {
 	Timestamp       int64
 	Decision        TradeDecision
 	DecisionTrigger TradeDecisionTrigger

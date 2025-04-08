@@ -94,7 +94,7 @@ func runServer(log *zap.Logger, symbol string, timeframe string, tradingDays int
 				return
 			}
 
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(100 * time.Millisecond)
 		}
 
 		// Отправляем сообщение о закрытии перед завершением

@@ -6,11 +6,8 @@ import (
 	"cb_grok/internal/optimize"
 	"cb_grok/internal/telegram"
 	"cb_grok/internal/utils/logger"
-	"context"
 	"flag"
 	"go.uber.org/fx"
-	"log"
-	"time"
 )
 
 func main() {
@@ -20,7 +17,7 @@ func main() {
 		telegram.Module,
 		config.Module,
 		optimize.Module,
-		fx.Invoke(registerOptimize),
+		fx.Invoke(runOptimization),
 	)
 
 	app.Run()
@@ -55,24 +52,24 @@ func runOptimization(opt optimize.Optimize) error {
 	})
 }
 
-func registerOptimize(
-	lifeCycle fx.Lifecycle,
-	opt optimize.Optimize,
-	shutdowner fx.Shutdowner,
-) {
-	lifeCycle.Append(fx.Hook{
-		OnStart: func(_ context.Context) error {
-			if err := runOptimization(opt); err != nil {
-				log.Fatalf("run optimize error: %v", err)
-			}
-			time.Sleep(1 * time.Second) // TODO: implement graceful-shutdown support
-			if err := shutdowner.Shutdown(); err != nil {
-				log.Printf("shutdown error: %v", err)
-			}
-			return nil
-		},
-		OnStop: func(_ context.Context) error {
-			return nil
-		},
-	})
-}
+//func registerOptimize(
+//	lifeCycle fx.Lifecycle,
+//	opt optimize.Optimize,
+//	shutdowner fx.Shutdowner,
+//) {
+//	lifeCycle.Append(fx.Hook{
+//		OnStart: func(_ context.Context) error {
+//			if err := runOptimization(opt); err != nil {
+//				log.Fatalf("run optimize error: %v", err)
+//			}
+//			time.Sleep(1 * time.Second) // TODO: implement graceful-shutdown support
+//			if err := shutdowner.Shutdown(); err != nil {
+//				log.Printf("shutdown error: %v", err)
+//			}
+//			return nil
+//		},
+//		OnStop: func(_ context.Context) error {
+//			return nil
+//		},
+//	})
+//}
