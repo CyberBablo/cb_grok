@@ -2,7 +2,6 @@ package strategy
 
 import (
 	"cb_grok/pkg/models"
-	"math"
 )
 
 type Strategy interface {
@@ -10,8 +9,6 @@ type Strategy interface {
 }
 
 type StrategyParams struct {
-	Symbol string `json:"symbol,omitempty"`
-
 	MAShortPeriod       int     `json:"ma_short_period,omitempty"`
 	MALongPeriod        int     `json:"ma_long_period,omitempty"`
 	RSIPeriod           int     `json:"rsi_period,omitempty"`
@@ -46,8 +43,4 @@ type Signals struct {
 	TrendSignal      int
 	BBSignal         int
 	StochasticSignal int // Сигнал от Stochastic
-}
-
-func Tanh(x float64) float64 {
-	return math.Tanh(x)
 }

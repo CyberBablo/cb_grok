@@ -120,7 +120,7 @@ func (s *LinearBiasStrategy) Apply(candles []models.OHLCV, params StrategyParams
 			float64(signals.BBSignal)*params.BBWeight +
 			float64(signals.StochasticSignal)*params.StochasticWeight
 
-		signal = Tanh(signal)
+		signal = math.Tanh(signal)
 
 		if signal > params.BuySignalThreshold {
 			appliedCandles[i].Signal = 1
@@ -161,28 +161,3 @@ func adjustPeriod(basePeriod int, atr []float64, atrMean float64) int {
 	}
 	return adjusted
 }
-
-/*
-
-package strategy
-
-import (
-	"cb_grok/internal/indicators"
-	"cb_grok/pkg/models"
-	"math"
-)
-
-type LinearBiasStrategy struct{}
-
-func NewLinearBiasStrategy() Strategy {
-	return &LinearBiasStrategy{}
-}
-
-
-
-
-
-
-
-
-*/

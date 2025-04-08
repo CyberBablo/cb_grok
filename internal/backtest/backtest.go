@@ -7,22 +7,11 @@ import (
 	"math"
 )
 
-// Order представляет информацию о торговом ордере
-type Order struct {
-	Action    string  `json:"action"`
-	Amount    float64 `json:"amount"`
-	Price     float64 `json:"price"`
-	Timestamp int64   `json:"timestamp"`
-	Reason    string  `json:"reason,omitempty"`
-}
-
-// Backtest определяет интерфейс бэктеста
 type Backtest interface {
-	Run(candles []models.OHLCV, params strategy.StrategyParams) (sharpeRatio float64, orders []Order, finalCapital float64, maxDrawdown float64, winRate float64, err error)
+	Run(candles []models.OHLCV, params strategy.StrategyParams) (*BacktestResult, error)
 }
 
-// backtestImpl реализует логику бэктеста
-type backtestImpl struct {
+type backtest struct {
 	InitialCapital       float64
 	Commission           float64
 	SlippagePercent      float64
@@ -31,9 +20,8 @@ type backtestImpl struct {
 	TakeProfitMultiplier float64
 }
 
-// NewBacktest создает новый экземпляр бэктеста
 func NewBacktest() Backtest {
-	return &backtestImpl{
+	return &backtest{
 		InitialCapital:       10000.0,
 		Commission:           0.001,  // 0.1%
 		SlippagePercent:      0.001,  // 0.1%
@@ -43,17 +31,16 @@ func NewBacktest() Backtest {
 	}
 }
 
-// Run выполняет бэктест
-func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams) (float64, []Order, float64, float64, float64, error) {
+func (b *backtest) Run(ohlcv []models.OHLCV, params strategy.StrategyParams) (*BacktestResult, error) {
 	str := strategy.NewLinearBiasStrategy()
 	candles := str.Apply(ohlcv, params)
 	if candles == nil {
-		return 0, nil, b.InitialCapital, 0, 0, nil
+		return nil, fmt.Errorf("no candles after strategy apply")
 	}
 
 	for _, c := range candles {
 		if c.ATR == 0 {
-			return 0, nil, b.InitialCapital, 0, 0, fmt.Errorf("ATR is required for backtest")
+			return nil, fmt.Errorf("ATR is required for backtest")
 		}
 	}
 
@@ -164,8 +151,18 @@ func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams)
 			winRate = float64(wins) / float64(totalTrades) * 100
 		}
 
-		return sharpeRatio, orders, capital, maxDrawdown, winRate, nil
+		return &BacktestResult{
+			SharpeRatio:  sharpeRatio,
+			Orders:       orders,
+			FinalCapital: capital,
+			MaxDrawdown:  maxDrawdown,
+			WinRate:      winRate,
+		}, nil
+
 	}
 
-	return 0, orders, capital, 0, 0, nil
+	return &BacktestResult{
+		Orders:       orders,
+		FinalCapital: capital,
+	}, nil
 }
