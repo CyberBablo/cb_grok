@@ -45,7 +45,7 @@ func NewBacktest() Backtest {
 
 // Run выполняет бэктест
 func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams) (float64, []Order, float64, float64, float64, error) {
-	str := strategy.NewMovingAverageStrategy()
+	str := strategy.NewLinearBiasStrategy()
 	candles := str.Apply(ohlcv, params)
 	if candles == nil {
 		return 0, nil, b.InitialCapital, 0, 0, nil
