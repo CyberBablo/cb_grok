@@ -32,7 +32,7 @@ type StrategyParams struct {
 	BollingerStdDev     float64 `json:"bollinger_std_dev,omitempty"`
 	BBWeight            float64 `json:"bb_weight,omitempty"`
 
-	Pair string `json:"pair,omitempty"`
+	//Pair string `json:"pair,omitempty"`
 }
 
 type Signals struct {

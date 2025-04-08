@@ -199,7 +199,6 @@ func runOptimization(
 			BollingerPeriod:     bollingerPeriod,
 			BollingerStdDev:     bollingerStdDev,
 			BBWeight:            bbWeight,
-			Pair:                symbol,
 		}
 
 		trainSharpe, _, _, trainMaxDD, trainWinRate, err := bt.Run(trainCandles, params)
@@ -268,7 +267,6 @@ func runOptimization(
 		BollingerPeriod:     bestParams["bollinger_period"].(int),
 		BollingerStdDev:     bestParams["bollinger_std_dev"].(float64),
 		BBWeight:            bestParams["bb_weight"].(float64),
-		Pair:                symbol,
 	}
 
 	valSharpe, orders, capital, valMaxDD, valWinRate, err := bt.Run(validationCandles, bestStrategyParams)
