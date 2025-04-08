@@ -17,7 +17,6 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
-	"math"
 	"os"
 	"path/filepath"
 	"time"
@@ -248,7 +247,7 @@ func runOptimization(
 
 		//combinedSharpe := (valSharpe + trainSharpe) / 2 * math.Log(float64(len(valOrders)+1))
 
-		combinedSharpe := valSharpe * (1 - valMaxDD/100) * math.Log(float64(len(valOrders)+1))
+		combinedSharpe := valSharpe * (1 - valMaxDD/100) * float64(min(float64(len(valOrders))/(float64(validationSetDays*2)), 1))
 		//combinedSharpe = combinedSharpe * valWinRate / 100
 		log.Info("Trial result",
 			zap.Int("trial", trial.ID),
