@@ -55,17 +55,19 @@ func (t *trader) Run(mode TradeMode) error {
 			continue
 		}
 
-		fmt.Printf(">>>>> %s\n", string(message))
-
 		action, err := t.algo(candle)
 		if err != nil {
 			t.log.Error("trade algo error", zap.Error(err), zap.String("message", string(message)))
 			t.tg.SendMessage(fmt.Sprintf("trade algo error: %s\n\nMessage: %s", err.Error(), string(message)))
 		}
 
-		b, _ := json.Marshal(action)
+		if action != nil && action.Decision == DecisionBuy {
+			b, _ := json.Marshal(action)
 
-		fmt.Printf("%s\n\n", string(b))
+			fmt.Printf(">>>>> %s\n", string(message))
+
+			fmt.Printf("%s\n\n", string(b))
+		}
 
 	}
 

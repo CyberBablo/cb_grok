@@ -130,9 +130,9 @@ func (s *LinearBiasStrategy) Apply(candles []models.OHLCV, params StrategyParams
 			appliedCandles[i].Signal = 0
 		}
 
-		if i > 0 {
-			appliedCandles[i].Position = appliedCandles[i].Signal - appliedCandles[i-1].Signal
-		}
+		//if i > 0 {
+		//	appliedCandles[i].Position = appliedCandles[i].Signal - appliedCandles[i-1].Signal
+		//}
 	}
 
 	return appliedCandles

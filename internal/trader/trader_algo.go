@@ -9,25 +9,20 @@ import (
 )
 
 func (t *trader) algo(candle models.OHLCV) (*Action, error) {
-	requiredCandles := max(t.model.EMALongPeriod, t.model.MALongPeriod, t.model.MACDLongPeriod, t.model.ATRPeriod, t.model.RSIPeriod)
-
 	t.state.ohlcv = append(t.state.ohlcv, candle)
-	if len(t.state.ohlcv) < requiredCandles {
-		return nil, nil
-	}
 
 	appliedOHLCV := t.strategy.Apply(t.state.ohlcv, t.model.StrategyParams)
 	if appliedOHLCV == nil {
-		return nil, fmt.Errorf("strategy application failed")
+		return nil, nil
 	}
 
 	currentCandle := appliedOHLCV[len(appliedOHLCV)-1]
 
-	b, _ := json.Marshal(currentCandle)
-	fmt.Printf("<<<<< %s\n", string(b))
-
 	currentSignal := currentCandle.Signal
 	currentPrice := currentCandle.Close
+
+	b, _ := json.Marshal(currentCandle)
+	fmt.Printf("<<<<< %s\n", string(b))
 
 	atr := currentCandle.ATR
 

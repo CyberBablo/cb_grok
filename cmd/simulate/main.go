@@ -11,6 +11,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/schollz/progressbar/v3"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"net/http"
@@ -83,6 +84,7 @@ func runServer(log *zap.Logger, symbol string, timeframe string, tradingDays int
 		}
 		defer conn.Close()
 
+		bar := progressbar.Default(int64(len(candles)), "candles")
 		for _, v := range candles {
 			d, err := json.Marshal(v)
 			if err != nil {
@@ -93,8 +95,9 @@ func runServer(log *zap.Logger, symbol string, timeframe string, tradingDays int
 				log.Sugar().Errorf("simulation server: write message error: %s", err.Error())
 				return
 			}
+			bar.Add(1)
 
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(10 * time.Millisecond)
 		}
 
 		// Отправляем сообщение о закрытии перед завершением

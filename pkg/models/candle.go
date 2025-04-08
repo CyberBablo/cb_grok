@@ -23,7 +23,6 @@ type AppliedOHLCV struct {
 	MACD        float64
 	MACDSignal  float64
 	Signal      int
-	Position    int
 	UpperBB     float64
 	LowerBB     float64
 	StochasticK float64 // Значение %K
