@@ -4,9 +4,9 @@ import (
 	"cb_grok/config"
 	"cb_grok/internal/backtest"
 	"cb_grok/internal/exchange"
+	"cb_grok/internal/model"
 	"cb_grok/internal/strategy"
 	"cb_grok/internal/telegram"
-	"cb_grok/internal/trading_model"
 	"cb_grok/internal/utils"
 	"context"
 	"encoding/json"
@@ -138,7 +138,10 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 		log.Info(fmt.Sprintf("Order: %v", order))
 	}
 
-	filename := trading_model.SaveModel(params.Symbol, bestStrategyParams)
+	filename := model.Save(model.Model{
+		Symbol:         params.Symbol,
+		StrategyParams: bestStrategyParams,
+	})
 
 	orderCount := len(valBTResult.Orders)
 	result := fmt.Sprintf(

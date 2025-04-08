@@ -24,7 +24,6 @@ const (
 func main() {
 	fx.New(
 		logger.Module,
-		exchange.Module,
 		strategy.Module,
 		backtest.Module,
 		telegram.Module,

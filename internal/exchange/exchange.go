@@ -7,4 +7,6 @@ import (
 type Exchange interface {
 	FetchOHLCV(symbol string, timeframe string, total int) ([]models.OHLCV, error)
 	CreateOrder(symbol, side string, amount, stopLoss, takeProfit float64) error
+
+	GetWSUrl() string
 }

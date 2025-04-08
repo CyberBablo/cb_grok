@@ -87,3 +87,7 @@ func (e *bybitImpl) FetchOHLCV(symbol string, timeframe string, total int) ([]mo
 
 	return candles, nil
 }
+
+func (e *bybitImpl) GetWSUrl() string {
+	return ""
+}

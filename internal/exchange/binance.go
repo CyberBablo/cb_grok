@@ -88,3 +88,7 @@ func (e *binanceImpl) FetchOHLCV(symbol string, timeframe string, total int) ([]
 
 	return candles, nil
 }
+
+func (e *binanceImpl) GetWSUrl() string {
+	return ""
+}
