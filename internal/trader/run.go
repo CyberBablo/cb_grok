@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/iamjinlei/go-tachart/tachart"
+	"github.com/samber/lo"
 	"go.uber.org/zap"
+	"os"
 	"time"
 )
 
@@ -35,6 +37,8 @@ func (t *trader) Run(mode TradeMode) error {
 
 	// --------------------------------------------------------------
 
+	tpv := 0.0
+
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil && websocket.IsCloseError(err, websocket.CloseNormalClosure) {
@@ -60,34 +64,51 @@ func (t *trader) Run(mode TradeMode) error {
 			t.tg.SendMessage(fmt.Sprintf("trade algo error: %s\n\nMessage: %s", err.Error(), string(message)))
 		}
 
-		if action != nil && action.Decision != DecisionHold {
-			t.log.Info("trade algo event",
-				zap.Int64("timeframe", action.Timestamp),
-				zap.String("decision", string(action.Decision)),
-				zap.String("trigger", string(action.DecisionTrigger)),
-				zap.Float64("asset_amount", action.AssetAmount),
-				zap.String("asset_curr", action.AssetCurrency),
-				zap.Float64("portfolio_usdt", action.PortfolioValue),
-			)
+		if action != nil {
+			tpv = action.PortfolioValue
+
+			if action.Decision != DecisionHold {
+				t.log.Info("trade algo event",
+					zap.Int64("timeframe", action.Timestamp),
+					zap.String("decision", string(action.Decision)),
+					zap.String("trigger", string(action.DecisionTrigger)),
+					zap.Float64("asset_amount", action.AssetAmount),
+					zap.String("asset_curr", action.AssetCurrency),
+					zap.Float64("portfolio_usdt", action.PortfolioValue),
+				)
+			}
 		}
 	}
 
-	t.log.Info("simulation results", zap.Int("num_events", len(t.state.events)))
+	if mode == ModeSimulation {
+		t.log.Info("simulation results", zap.Int("num_orders", len(t.state.events)), zap.Float64("tpv", tpv))
 
-	//if mode == ModeSimulation {
-	//	log.Info("generating report", zap.Int("candles_length", len(dataBuffer)), zap.Int("event_length", len(events)))
-	//	err := generateSimulationReport(dataBuffer, events)
-	//	if err != nil {
-	//		log.Error("generate report", zap.Error(err))
-	//	}
-	//}
+		path, err := generateSimulationReport(*t.state)
+		if err != nil {
+			t.log.Error("generate report", zap.Error(err))
+			return nil
+		}
+
+		t.tg.SendFile(
+			path,
+			fmt.Sprintf(
+				"simulation result:\n\nnum_orders: %d\ntpv: %.2f USDT",
+				len(t.state.events),
+				tpv,
+			),
+		)
+	}
 	return nil
 }
 
-func generateSimulationReport(candles []models.OHLCV, events []tachart.Event) error {
-	var chartCandles []tachart.Candle
+func generateSimulationReport(state traderState) (string, error) {
+	dir := "lib/simulation_report"
+	_ = os.Mkdir(dir, os.ModePerm)
 
-	for _, c := range candles {
+	var chartCandles []tachart.Candle
+	var events []tachart.Event
+
+	for _, c := range state.ohlcv {
 		chartCandles = append(chartCandles, tachart.Candle{
 			Label: time.UnixMilli(c.Timestamp).Format("2006-01-02 15:04"),
 			O:     c.Open,
@@ -98,16 +119,27 @@ func generateSimulationReport(candles []models.OHLCV, events []tachart.Event) er
 		})
 	}
 
+	for _, e := range state.events {
+		events = append(events, tachart.Event{
+			Type:        lo.If(e.Decision == DecisionBuy, tachart.Long).Else(tachart.Short),
+			Label:       time.UnixMilli(e.Timestamp).Format("2006-01-02 15:04"),
+			Description: string(e.DecisionTrigger),
+		})
+	}
+
 	cfg := tachart.NewConfig().
 		SetChartWidth(1080).
 		SetChartHeight(800).
 		UseRepoAssets() // serving assets file from current repo, avoid network access
 
 	c := tachart.New(*cfg)
+
 	timestamp := time.Now().Format("20060102_150405")
-	err := c.GenStatic(chartCandles, events, fmt.Sprintf("simulation_%s.html", timestamp))
+	path := fmt.Sprintf("%s/simulation_%s.html", dir, timestamp)
+
+	err := c.GenStatic(chartCandles, events, path)
 	if err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	return path, nil
 }

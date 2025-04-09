@@ -16,16 +16,17 @@ func (t *trader) algo(candle models.OHLCV) (*Action, error) {
 
 	currentCandle := appliedOHLCV[len(appliedOHLCV)-1]
 
-	var currentSignal int
+	//var currentSignal int
 
-	buyDelayCandles := 0
-	for _, c := range appliedOHLCV[len(appliedOHLCV)-1-buyDelayCandles:] {
-		if c.Signal == 1 {
-			currentSignal = 1
-			break
-		}
-	}
+	//buyDelayCandles := 0
+	//for _, c := range appliedOHLCV[len(appliedOHLCV)-1-buyDelayCandles:] {
+	//	if c.Signal == 1 {
+	//		currentSignal = 1
+	//		break
+	//	}
+	//}
 
+	currentSignal := currentCandle.Signal
 	currentPrice := currentCandle.Close
 
 	atr := currentCandle.ATR
@@ -96,7 +97,6 @@ func (t *trader) algo(candle models.OHLCV) (*Action, error) {
 		t.state.assets = transactionAmount
 		t.state.isPositionOpen = true
 
-		t.state.entryPrice = currentPrice
 		t.state.stopLoss = currentPrice - atr*t.settings.StopLossMultiplier
 		t.state.takeProfit = currentPrice + atr*t.settings.TakeProfitMultiplier
 	}

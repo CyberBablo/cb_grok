@@ -32,7 +32,6 @@ type traderState struct {
 	cash           float64
 	assets         float64
 	isPositionOpen bool
-	entryPrice     float64
 	stopLoss       float64
 	takeProfit     float64
 }
