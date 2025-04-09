@@ -64,39 +64,39 @@ func (s *LinearBiasStrategy) Apply(candles []models.OHLCV, params StrategyParams
 		// Добавлено поле StochasticSignal в инициализацию структуры Signals
 		signals := Signals{EMASignal: 0, RSISignal: 0, MACDSignal: 0, TrendSignal: 0, BBSignal: 0, StochasticSignal: 0}
 
-		if shortMA[i] > longMA[i] {
+		if shortMA[i-1] > longMA[i-1] {
 			signals.EMASignal = 1
-		} else if shortMA[i] < longMA[i] {
+		} else if shortMA[i-1] < longMA[i-1] {
 			signals.EMASignal = -1
 		}
-		if macd[i] > macdSignal[i] {
+		if macd[i-1] > macdSignal[i-1] {
 			signals.MACDSignal = 1
-		} else if macd[i] < macdSignal[i] {
+		} else if macd[i-1] < macdSignal[i-1] {
 			signals.MACDSignal = -1
 		}
 
-		if trend[i] && volatility[i] {
+		if trend[i-1] && volatility[i-1] {
 			signals.TrendSignal = 1
-		} else if !trend[i] && volatility[i] {
+		} else if !trend[i-1] && volatility[i-1] {
 			signals.TrendSignal = -1
 		}
 
-		if rsi[i] < params.BuyRSIThreshold {
+		if rsi[i-1] < params.BuyRSIThreshold {
 			signals.RSISignal = 1
-		} else if rsi[i] > params.SellRSIThreshold {
+		} else if rsi[i-1] > params.SellRSIThreshold {
 			signals.RSISignal = -1
 		}
 
-		if candles[i].Close < appliedCandles[i].LowerBB {
+		if candles[i-1].Close < appliedCandles[i-1].LowerBB {
 			signals.BBSignal = 1
-		} else if candles[i].Close > appliedCandles[i].UpperBB {
+		} else if candles[i-1].Close > appliedCandles[i-1].UpperBB {
 			signals.BBSignal = -1
 		}
 
 		// Добавлена логика сигналов для Stochastic Oscillator
-		if stochasticK[i] < 20 && stochasticK[i] > stochasticD[i] {
+		if stochasticK[i-1] < 20 && stochasticK[i-1] > stochasticD[i-1] {
 			signals.StochasticSignal = 1 // Покупка при пересечении снизу вверх в зоне перепроданности
-		} else if stochasticK[i] > 80 && stochasticK[i] < stochasticD[i] {
+		} else if stochasticK[i-1] > 80 && stochasticK[i-1] < stochasticD[i-1] {
 			signals.StochasticSignal = -1 // Продажа при пересечении сверху вниз в зоне перекупленности
 		}
 

@@ -165,7 +165,7 @@ func (o *optimize) objective(params objectiveParams) func(trial goptuna.Trial) (
 		combinedSharpe := valBTResult.SharpeRatio * (1 - valBTResult.MaxDrawdown/100) * math.Log(float64(len(valBTResult.Orders)+1))
 		//combinedSharpe = combinedSharpe * valWinRate / 100
 
-		log.Info("Trial result",
+		o.log.Info("Trial result",
 			zap.Int("trial", trial.ID),
 			zap.Float64("combined_sharpe", combinedSharpe),
 			zap.Float64("train_max_dd", trainBTResult.MaxDrawdown),

@@ -148,7 +148,7 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 		"Символ: %s\nКоличество trials: %d\nКоличество дней на валидации: %d\nTimeframe: %s\nКоличество свечей в сутках: %d\nКоличество сделок: %d\nКомбинированный Sharpe Ratio: %.2f\nВалидационный Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
 		params.Symbol, params.Trials, params.ValidationSetDays, params.Timeframe, candlesPerDay, orderCount, combinedSharpeRatio, valBTResult.SharpeRatio, valBTResult.FinalCapital, valBTResult.MaxDrawdown, valBTResult.WinRate, filename)
 
-	log.Info("optimization completed",
+	o.log.Info("optimization completed",
 		zap.Float64("combined_sharpe_ratio", combinedSharpeRatio),
 		zap.Float64("validation_sharpe_ratio", valBTResult.SharpeRatio),
 		zap.Float64("validation_max_drawdown", valBTResult.MaxDrawdown),
