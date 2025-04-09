@@ -49,7 +49,7 @@ func (t *trader) algo(candle models.OHLCV) (*Action, error) {
 				t.log.Error("create order failed", zap.Error(err))
 			}
 
-			t.state.cash += t.state.assets * currentPrice
+			t.state.cash += transactionAmount * currentPrice
 			t.state.assets = 0.0
 			t.state.isPositionOpen = false
 
@@ -64,7 +64,7 @@ func (t *trader) algo(candle models.OHLCV) (*Action, error) {
 				t.log.Error("create order failed", zap.Error(err))
 			}
 
-			t.state.cash += t.state.assets * currentPrice
+			t.state.cash += transactionAmount * currentPrice
 			t.state.assets = 0.0
 			t.state.isPositionOpen = false
 
@@ -78,7 +78,7 @@ func (t *trader) algo(candle models.OHLCV) (*Action, error) {
 				t.log.Error("create order failed", zap.Error(err))
 			}
 
-			t.state.cash += t.state.assets * currentPrice
+			t.state.cash += transactionAmount * currentPrice
 			t.state.assets = 0.0
 			t.state.isPositionOpen = false
 		}

@@ -74,7 +74,7 @@ func (t *trader) Run(mode TradeMode) error {
 
 	t.log.Info("simulation results", zap.Int("num_events", len(t.state.events)))
 
-	//if mode == "simulation" {
+	//if mode == ModeSimulation {
 	//	log.Info("generating report", zap.Int("candles_length", len(dataBuffer)), zap.Int("event_length", len(events)))
 	//	err := generateSimulationReport(dataBuffer, events)
 	//	if err != nil {
