@@ -27,7 +27,7 @@ func (e *mockImpl) CreateOrder(symbol, side string, amount float64, stopLoss, ta
 		zap.Float64("stop_loss", stopLoss),
 		zap.Float64("take_profit", takeProfit))
 
-	e.tg.SendMessage("Mock order created")
+	//e.tg.SendMessage("Mock order created")
 
 	return nil
 }

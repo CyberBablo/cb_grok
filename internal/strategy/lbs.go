@@ -123,6 +123,7 @@ func (s *LinearBiasStrategy) Apply(candles []models.OHLCV, params StrategyParams
 		signal = math.Tanh(signal)
 
 		if signal > params.BuySignalThreshold {
+			//fmt.Println("победа!")
 			appliedCandles[i].Signal = 1
 		} else if signal < params.SellSignalThreshold {
 			appliedCandles[i].Signal = -1

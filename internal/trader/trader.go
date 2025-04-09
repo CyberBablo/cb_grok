@@ -76,5 +76,6 @@ func (t *trader) Setup(params TraderParams) {
 func (t *trader) initState(initialCapital float64) *traderState {
 	return &traderState{
 		initialCapital: initialCapital,
+		cash:           initialCapital,
 	}
 }

@@ -2,7 +2,6 @@ package trader
 
 import (
 	"cb_grok/pkg/models"
-	"encoding/json"
 	"fmt"
 	"go.uber.org/zap"
 	"strings"
@@ -18,11 +17,36 @@ func (t *trader) algo(candle models.OHLCV) (*Action, error) {
 
 	currentCandle := appliedOHLCV[len(appliedOHLCV)-1]
 
-	currentSignal := currentCandle.Signal
+	var currentSignal int
+
+	for i, _ := range appliedOHLCV {
+		if appliedOHLCV[len(appliedOHLCV)-i-1].Signal == 1 {
+			fmt.Println("купил?", appliedOHLCV[len(appliedOHLCV)-i-1].Signal, len(appliedOHLCV)-i-1, len(appliedOHLCV))
+			if len(appliedOHLCV)-(len(appliedOHLCV)-i-1) < 3 {
+				currentSignal = 1
+				fmt.Println("есть сигнал по покупке", appliedOHLCV[len(appliedOHLCV)-i-1].Signal, len(appliedOHLCV)-i-1, len(appliedOHLCV))
+				//os.Exit(0)
+			}
+			//os.Exit(0)
+			break
+		} else if appliedOHLCV[len(appliedOHLCV)-i-1].Signal == -1 {
+			fmt.Println("продал?", appliedOHLCV[len(appliedOHLCV)-i-1].Signal, len(appliedOHLCV)-i-1, len(appliedOHLCV))
+
+			if len(appliedOHLCV)-(len(appliedOHLCV)-i-1) < 1 {
+				currentSignal = -1
+				fmt.Println("есть сигнал о продаже", appliedOHLCV[len(appliedOHLCV)-i-1].Signal, len(appliedOHLCV)-i-1, len(appliedOHLCV))
+				//os.Exit(0)
+			}
+			break
+
+		}
+	}
+
+	//currentSignal := currentCandle.Signal
 	currentPrice := currentCandle.Close
 
-	b, _ := json.Marshal(currentCandle)
-	fmt.Printf("<<<<< %s\n", string(b))
+	//b, _ := json.Marshal(currentCandle)
+	//fmt.Printf("<<<<< %s\n", string(b))
 
 	atr := currentCandle.ATR
 
@@ -32,6 +56,10 @@ func (t *trader) algo(candle models.OHLCV) (*Action, error) {
 	)
 
 	transactionAmount := 0.0
+	//if currentSignal == 1 {
+	//	fmt.Println(t.state.cash)
+	//	os.Exit(0)
+	//}
 
 	if t.state.isPositionOpen {
 		if currentPrice <= t.state.stopLoss { // sell stop-loss
@@ -79,6 +107,7 @@ func (t *trader) algo(candle models.OHLCV) (*Action, error) {
 			t.state.isPositionOpen = false
 		}
 	} else if currentSignal == 1 && t.state.cash > 0 {
+		fmt.Println("DESICION BUY?")
 		decision = DecisionBuy
 
 		transactionAmount = t.state.cash / currentPrice
