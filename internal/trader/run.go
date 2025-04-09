@@ -38,13 +38,12 @@ func (t *trader) Run(mode TradeMode) error {
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil && websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-			t.log.Info("WebSocket closed normally", zap.Error(err))
-			//t.tg.SendMessage("Симуляция завершена")
+			t.log.Info("websocket closed normally", zap.Error(err))
 			break
 		}
 		if err != nil {
-			t.log.Error("WebSocket read error", zap.Error(err))
-			t.tg.SendMessage(fmt.Sprintf("Ошибка WebSocket: %v", err))
+			t.log.Error("websocket read error", zap.Error(err))
+			t.tg.SendMessage(fmt.Sprintf("websocket error: %v", err))
 			break
 		}
 
@@ -61,14 +60,16 @@ func (t *trader) Run(mode TradeMode) error {
 			t.tg.SendMessage(fmt.Sprintf("trade algo error: %s\n\nMessage: %s", err.Error(), string(message)))
 		}
 
-		if action != nil && action.Decision == DecisionBuy {
-			b, _ := json.Marshal(action)
-
-			fmt.Printf(">>>>> %s\n", string(message))
-
-			fmt.Printf("%s\n\n", string(b))
+		if action != nil && action.Decision != DecisionHold {
+			t.log.Info("trade algo event",
+				zap.Int64("timeframe", action.Timestamp),
+				zap.String("decision", string(action.Decision)),
+				zap.String("trigger", string(action.DecisionTrigger)),
+				zap.Float64("asset_amount", action.AssetAmount),
+				zap.String("asset_curr", action.AssetCurrency),
+				zap.Float64("portfolio_usdt", action.PortfolioValue),
+			)
 		}
-
 	}
 
 	t.log.Info("simulation results", zap.Int("num_events", len(t.state.events)))

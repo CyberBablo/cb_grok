@@ -2,7 +2,6 @@ package trader
 
 import (
 	"cb_grok/pkg/models"
-	"fmt"
 	"go.uber.org/zap"
 	"strings"
 )
@@ -19,34 +18,15 @@ func (t *trader) algo(candle models.OHLCV) (*Action, error) {
 
 	var currentSignal int
 
-	for i, _ := range appliedOHLCV {
-		if appliedOHLCV[len(appliedOHLCV)-i-1].Signal == 1 {
-			fmt.Println("купил?", appliedOHLCV[len(appliedOHLCV)-i-1].Signal, len(appliedOHLCV)-i-1, len(appliedOHLCV))
-			if len(appliedOHLCV)-(len(appliedOHLCV)-i-1) < 3 {
-				currentSignal = 1
-				fmt.Println("есть сигнал по покупке", appliedOHLCV[len(appliedOHLCV)-i-1].Signal, len(appliedOHLCV)-i-1, len(appliedOHLCV))
-				//os.Exit(0)
-			}
-			//os.Exit(0)
+	buyDelayCandles := 0
+	for _, c := range appliedOHLCV[len(appliedOHLCV)-1-buyDelayCandles:] {
+		if c.Signal == 1 {
+			currentSignal = 1
 			break
-		} else if appliedOHLCV[len(appliedOHLCV)-i-1].Signal == -1 {
-			fmt.Println("продал?", appliedOHLCV[len(appliedOHLCV)-i-1].Signal, len(appliedOHLCV)-i-1, len(appliedOHLCV))
-
-			if len(appliedOHLCV)-(len(appliedOHLCV)-i-1) < 1 {
-				currentSignal = -1
-				fmt.Println("есть сигнал о продаже", appliedOHLCV[len(appliedOHLCV)-i-1].Signal, len(appliedOHLCV)-i-1, len(appliedOHLCV))
-				//os.Exit(0)
-			}
-			break
-
 		}
 	}
 
-	//currentSignal := currentCandle.Signal
 	currentPrice := currentCandle.Close
-
-	//b, _ := json.Marshal(currentCandle)
-	//fmt.Printf("<<<<< %s\n", string(b))
 
 	atr := currentCandle.ATR
 
@@ -56,10 +36,6 @@ func (t *trader) algo(candle models.OHLCV) (*Action, error) {
 	)
 
 	transactionAmount := 0.0
-	//if currentSignal == 1 {
-	//	fmt.Println(t.state.cash)
-	//	os.Exit(0)
-	//}
 
 	if t.state.isPositionOpen {
 		if currentPrice <= t.state.stopLoss { // sell stop-loss
@@ -92,7 +68,7 @@ func (t *trader) algo(candle models.OHLCV) (*Action, error) {
 			t.state.assets = 0.0
 			t.state.isPositionOpen = false
 
-		} else if currentSignal == -1 { // sell signal
+		} else if currentSignal == -1 && t.state.assets > 0 { // sell signal
 			decision = DecisionSell
 
 			transactionAmount = t.state.assets
@@ -106,8 +82,7 @@ func (t *trader) algo(candle models.OHLCV) (*Action, error) {
 			t.state.assets = 0.0
 			t.state.isPositionOpen = false
 		}
-	} else if currentSignal == 1 && t.state.cash > 0 {
-		fmt.Println("DESICION BUY?")
+	} else if currentSignal == 1 && t.state.cash > 0 { // buy signal
 		decision = DecisionBuy
 
 		transactionAmount = t.state.cash / currentPrice
@@ -137,15 +112,6 @@ func (t *trader) algo(candle models.OHLCV) (*Action, error) {
 		Comment:         "",
 		PortfolioValue:  portfolioValue,
 	}
-	//
-	//t.log.Info("trade algo action",
-	//	zap.Int64("timeframe", action.Timestamp),
-	//	zap.String("decision", string(action.Decision)),
-	//	zap.String("trigger", string(action.DecisionTrigger)),
-	//	zap.Float64("asset_amount", action.AssetAmount),
-	//	zap.String("asset_curr", action.AssetCurrency),
-	//	zap.Float64("portfolio_usdt", action.PortfolioValue),
-	//)
 
 	if action.Decision != DecisionHold {
 		t.state.events = append(t.state.events, action)
