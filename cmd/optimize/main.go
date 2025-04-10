@@ -234,12 +234,12 @@ func runOptimization(
 			Pair:                pair,
 		}
 
-		trainSharpe, _, _, trainMaxDD, trainWinRate, err := bt.Run(trainCandles, params)
+		trainSharpe, _, _, trainMaxDD, trainWinRate, err := bt.RunIterativeApply(trainCandles, params)
 		if err != nil {
 			return 0, err
 		}
 
-		valSharpe, valOrders, _, valMaxDD, valWinRate, err := bt.Run(validationCandles, params)
+		valSharpe, valOrders, _, valMaxDD, valWinRate, err := bt.RunIterativeApply(validationCandles, params)
 		if err != nil {
 			log.Warn("Failed to run backtest on validation set", zap.Error(err))
 			return trainSharpe, nil
@@ -314,11 +314,18 @@ func runOptimization(
 		Pair:                pair,
 	}
 
-	valSharpe, orders, capital, valMaxDD, valWinRate, err := bt.Run(validationCandles, bestStrategyParams)
+	valSharpe, orders, capital, valMaxDD, valWinRate, err := bt.RunIterativeApply(validationCandles, bestStrategyParams)
 	if err != nil {
 		log.Error("optimize: final validation backtest", zap.Error(err))
 		return err
 	}
+
+	backtestSharpe, backtestOrders, backtestCapital, backtestMaxDD, backtestWinRate, err := bt.Run(validationCandles, bestStrategyParams)
+	if err != nil {
+		log.Error("optimize: final validation backtest", zap.Error(err))
+		return err
+	}
+
 	fmt.Println("ORDER HISTORY")
 	for _, order := range orders {
 		log.Info(fmt.Sprintf("Order: %v", order))
@@ -346,9 +353,14 @@ func runOptimization(
 		return err
 	}
 	orderCount := len(orders)
-	result := fmt.Sprintf(
-		"Ветка DEVX\nПара: %s\nКоличество trials: %d\nКоличество дней на валидации: %d\nТаймдельта: %s\nКоличество свечей в сутках: %d\nКоличество сделок: %d\nКомбинированный Sharpe Ratio: %.2f\nВалидационный Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
+
+	resultIterative := fmt.Sprintf(
+		"РЕЗУЛЬТАТ ИТЕРАТИВНОГО БЕКТЕСТА\nПара: %s\nКоличество trials: %d\nКоличество дней на валидации: %d\nТаймдельта: %s\nКоличество свечей в сутках: %d\nКоличество сделок: %d\nКомбинированный Sharpe Ratio: %.2f\nВалидационный Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
 		pair, trials, validationSetDays, timeDelta, candlesPerDay, orderCount, combinedSharpeRatio, valSharpe, capital, valMaxDD, valWinRate, filename)
+
+	resultBacktest := fmt.Sprintf(
+		"РЕЗУЛЬТАТ БЕКТЕСТА\nПара: %s\nКоличество trials: %d\nКоличество дней на валидации: %d\nТаймдельта: %s\nКоличество свечей в сутках: %d\nКоличество сделок: %d\nКомбинированный Sharpe Ratio: %.2f\nВалидационный Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
+		pair, trials, validationSetDays, timeDelta, candlesPerDay, len(backtestOrders), combinedSharpeRatio, backtestSharpe, backtestCapital, backtestMaxDD, backtestWinRate, filename)
 
 	log.Info("optimization completed",
 		zap.Float64("combined_sharpe_ratio", combinedSharpeRatio),
@@ -356,7 +368,10 @@ func runOptimization(
 		zap.Float64("validation_max_drawdown", valMaxDD),
 		zap.Float64("validation_win_rate", valWinRate),
 		zap.String("filename", filename))
-	tg.SendMessage(result)
+	tg.SendMessage(resultBacktest)
+
+	tg.SendMessage(resultIterative)
+
 	time.Sleep(5000 * time.Millisecond)
 	os.Exit(0)
 	return nil

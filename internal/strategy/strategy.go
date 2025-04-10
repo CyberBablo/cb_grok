@@ -6,7 +6,8 @@ import (
 )
 
 type Strategy interface {
-	Apply(candles []models.OHLCV, params StrategyParams) []models.AppliedOHLCV
+	ApplyIndicators(candles []models.OHLCV, params StrategyParams) []models.AppliedOHLCV
+	ApplySignals(appliedCandles []models.AppliedOHLCV, params StrategyParams) []models.AppliedOHLCV
 }
 
 type StrategyParams struct {

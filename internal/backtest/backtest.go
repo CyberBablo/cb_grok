@@ -19,6 +19,7 @@ type Order struct {
 // Backtest определяет интерфейс бэктеста
 type Backtest interface {
 	Run(candles []models.OHLCV, params strategy.StrategyParams) (sharpeRatio float64, orders []Order, finalCapital float64, maxDrawdown float64, winRate float64, err error)
+	RunIterativeApply(candles []models.OHLCV, params strategy.StrategyParams) (sharpeRatio float64, orders []Order, finalCapital float64, maxDrawdown float64, winRate float64, err error)
 }
 
 // backtestImpl реализует логику бэктеста
@@ -46,7 +47,135 @@ func NewBacktest() Backtest {
 // Run выполняет бэктест
 func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams) (float64, []Order, float64, float64, float64, error) {
 	str := strategy.NewLinearBiasStrategy()
-	candles := str.Apply(ohlcv, params)
+	candles := str.ApplyIndicators(ohlcv, params)
+	if candles == nil {
+		return 0, nil, b.InitialCapital, 0, 0, nil
+	}
+
+	candles = str.ApplySignals(candles, params)
+
+	for _, c := range candles {
+		if c.ATR == 0 {
+			return 0, nil, b.InitialCapital, 0, 0, fmt.Errorf("ATR is required for backtest")
+		}
+	}
+
+	capital := b.InitialCapital
+	position := 0.0
+	entryPrice := 0.0
+	stopLoss := 0.0
+	takeProfit := 0.0
+	var orders []Order
+	portfolioValues := make([]float64, len(candles))
+
+	for i := 1; i < len(candles)-1; i++ {
+		signal := candles[i].Signal
+		nextOpen := candles[i+1].Open
+		timestamp := candles[i+1].Timestamp
+		atr := candles[i].ATR
+
+		if position > 0 {
+			currentClose := candles[i].Close
+			if currentClose <= stopLoss {
+				sellPrice := nextOpen * (1 - b.SlippagePercent - b.Spread)
+				capital = position * sellPrice * (1 - b.Commission)
+				orders = append(orders, Order{Action: "sell", Amount: position, Price: sellPrice, Timestamp: timestamp, Reason: "stop_loss"})
+				position = 0
+			} else if currentClose >= takeProfit {
+				sellPrice := nextOpen * (1 - b.SlippagePercent - b.Spread)
+				capital = position * sellPrice * (1 - b.Commission)
+				orders = append(orders, Order{Action: "sell", Amount: position, Price: sellPrice, Timestamp: timestamp, Reason: "take_profit"})
+				position = 0
+			}
+		}
+
+		if signal == 1 && capital > 0 {
+			buyPrice := nextOpen * (1 + b.SlippagePercent + b.Spread)
+			position = capital / buyPrice * (1 - b.Commission)
+			capital = 0
+			entryPrice = buyPrice
+			stopLoss = entryPrice - atr*b.StopLossMultiplier
+			takeProfit = entryPrice + atr*b.TakeProfitMultiplier
+			orders = append(orders, Order{Action: "buy", Amount: position, Price: buyPrice, Timestamp: timestamp})
+		} else if signal == -1 && position > 0 {
+			sellPrice := nextOpen * (1 - b.SlippagePercent - b.Spread)
+			capital = position * sellPrice * (1 - b.Commission)
+			orders = append(orders, Order{Action: "sell", Amount: position, Price: sellPrice, Timestamp: timestamp, Reason: "signal"})
+			position = 0
+		}
+
+		portfolioValues[i] = capital + position*candles[i+1].Close
+	}
+
+	if position > 0 {
+		lastPrice := candles[len(candles)-1].Close * (1 - b.SlippagePercent - b.Spread)
+		capital = position * lastPrice * (1 - b.Commission)
+		orders = append(orders, Order{Action: "sell", Amount: position, Price: lastPrice, Timestamp: candles[len(candles)-1].Timestamp, Reason: "end_of_backtest"})
+	}
+
+	portfolioValues[len(candles)-1] = capital
+
+	if len(portfolioValues) > 1 {
+		returns := make([]float64, len(portfolioValues)-1)
+		for i := 1; i < len(portfolioValues); i++ {
+			if portfolioValues[i-1] != 0 {
+				returns[i-1] = (portfolioValues[i] - portfolioValues[i-1]) / portfolioValues[i-1]
+			}
+		}
+		meanReturn := 0.0
+		for _, r := range returns {
+			meanReturn += r
+		}
+		meanReturn /= float64(len(returns))
+
+		variance := 0.0
+		for _, r := range returns {
+			variance += (r - meanReturn) * (r - meanReturn)
+		}
+		stdDev := math.Sqrt(variance / float64(len(returns)))
+
+		sharpeRatio := 0.0
+		if stdDev != 0 {
+			sharpeRatio = meanReturn / stdDev * math.Sqrt(252) // Годовой Sharpe Ratio
+		}
+
+		// Расчет Max Drawdown
+		maxDrawdown := 0.0
+		peak := portfolioValues[0]
+		for _, value := range portfolioValues {
+			if value > peak {
+				peak = value
+			}
+			drawdown := (peak - value) / peak * 100
+			if drawdown > maxDrawdown {
+				maxDrawdown = drawdown
+			}
+		}
+
+		// Расчет Win Rate
+		var wins, totalTrades int
+		for i := 0; i < len(orders)-1; i += 2 {
+			if orders[i].Action == "buy" && orders[i+1].Action == "sell" {
+				if orders[i+1].Price > orders[i].Price {
+					wins++
+				}
+				totalTrades++
+			}
+		}
+		winRate := 0.0
+		if totalTrades > 0 {
+			winRate = float64(wins) / float64(totalTrades) * 100
+		}
+
+		return sharpeRatio, orders, capital, maxDrawdown, winRate, nil
+	}
+
+	return 0, orders, capital, 0, 0, nil
+}
+
+func (b *backtestImpl) RunIterativeApply(ohlcv []models.OHLCV, params strategy.StrategyParams) (float64, []Order, float64, float64, float64, error) {
+	str := strategy.NewLinearBiasStrategy()
+	candles := str.ApplyIndicators(ohlcv, params)
 	if candles == nil {
 		return 0, nil, b.InitialCapital, 0, 0, nil
 	}
@@ -65,8 +194,24 @@ func (b *backtestImpl) Run(ohlcv []models.OHLCV, params strategy.StrategyParams)
 	var orders []Order
 	portfolioValues := make([]float64, len(candles))
 
+	var valCandles []models.AppliedOHLCV
+	valCandles = append(valCandles, candles[0])
+
 	for i := 1; i < len(candles)-1; i++ {
-		signal := candles[i].Signal
+		var signal int
+		valCandles = append(valCandles, candles[i])
+		iterativeApply := str.ApplySignals(valCandles, params)
+		if len(iterativeApply) == 0 {
+			signal = 0
+		} else {
+			signal = iterativeApply[i].Signal
+		}
+
+		//fmt.Println("CANDLE INDICATORS")
+		//for k, v := range iterativeApply {
+		//	fmt.Println(i, k, v.ShortEMA, v.LongEMA, v.MACDSignal, v.StochasticK, v.UpperBB, v.LowerBB)
+		//}
+		//signal := candles[i].Signal
 		nextOpen := candles[i+1].Open
 		timestamp := candles[i+1].Timestamp
 		atr := candles[i].ATR
