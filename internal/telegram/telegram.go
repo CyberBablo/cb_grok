@@ -3,7 +3,6 @@ package telegram
 import (
 	"cb_grok/config"
 	"errors"
-	"fmt"
 	tele "github.com/tucnak/telebot"
 	"log"
 )
@@ -43,11 +42,11 @@ func (s *TelegramService) SendMessage(text string) {
 
 func (s *TelegramService) SendFile(path string, text string) {
 	go func() {
-		fmt.Println(path)
 		doc := &tele.Document{
 			File:     tele.FromDisk(path),
 			Caption:  text,
 			FileName: "events.html"}
+
 		_, err := s.bot.Send(&tele.Chat{ID: s.chatID}, doc)
 		if err != nil {
 			log.Printf("telegram send error: %s\n", err.Error())
