@@ -40,7 +40,7 @@ func runOptimization(
 	cfg config.Config,
 ) error {
 	var validationSetDays int
-	var pair string
+	var symbol string
 	var timeDelta string
 	var trials int
 	var dataSetCandles int
@@ -49,8 +49,8 @@ func runOptimization(
 	flag.IntVar(&validationSetDays, "val-set-days", 0, "Number of days for validation set")
 	flag.IntVar(&dataSetCandles, "dataset-candles", 1000, "Number of dataset Candles")
 	flag.IntVar(&workers, "workers", 2, "Number of parallel workers")
-	flag.StringVar(&pair, "trade-pair", "BTC/USDT", "Number of days for validation set")
-	flag.StringVar(&timeDelta, "time-delta", "", "Time delta for validation set")
+	flag.StringVar(&symbol, "symbol", "BTC/USDT", "Number of days for validation set")
+	flag.StringVar(&timeDelta, "timeframe", "", "Time delta for validation set")
 	flag.Parse()
 
 	if validationSetDays <= 0 {
@@ -67,7 +67,7 @@ func runOptimization(
 	secondsOfDelta := utils.TimeframeToMilliseconds(timeDelta) / 1000
 	timePeriodMultiplier := float64(60 * 60 / secondsOfDelta)
 	candlesPerDay := (24 * 60 * 60) / int(secondsOfDelta)
-	candles, err := ex.FetchOHLCV(pair, timeDelta, dataSetCandles)
+	candles, err := ex.FetchOHLCV(symbol, timeDelta, dataSetCandles)
 	if err != nil {
 		log.Error("optimize: fetch OHLCV", zap.Error(err))
 		return err
@@ -231,7 +231,7 @@ func runOptimization(
 			StochasticDPeriod:   stochasticDPeriod,
 			StochasticKPeriod:   stochasticKPeriod,
 			StochasticWeight:    stochasticWeight,
-			Pair:                pair,
+			Symbol:              symbol,
 		}
 
 		trainSharpe, _, _, trainMaxDD, trainWinRate, err := bt.RunIterativeApply(trainCandles, params)
@@ -311,7 +311,7 @@ func runOptimization(
 		StochasticKPeriod:   bestParams["stochastic_k_period"].(int),
 		StochasticDPeriod:   bestParams["stochastic_d_period"].(int),
 		StochasticWeight:    bestParams["stochastic_weight"].(float64),
-		Pair:                pair,
+		Symbol:              symbol,
 	}
 
 	valSharpe, orders, capital, valMaxDD, valWinRate, err := bt.RunIterativeApply(validationCandles, bestStrategyParams)
@@ -356,11 +356,11 @@ func runOptimization(
 
 	resultIterative := fmt.Sprintf(
 		"РЕЗУЛЬТАТ ИТЕРАТИВНОГО БЕКТЕСТА\nПара: %s\nКоличество trials: %d\nКоличество дней на валидации: %d\nТаймдельта: %s\nКоличество свечей в сутках: %d\nКоличество сделок: %d\nКомбинированный Sharpe Ratio: %.2f\nВалидационный Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
-		pair, trials, validationSetDays, timeDelta, candlesPerDay, orderCount, combinedSharpeRatio, valSharpe, capital, valMaxDD, valWinRate, filename)
+		symbol, trials, validationSetDays, timeDelta, candlesPerDay, orderCount, combinedSharpeRatio, valSharpe, capital, valMaxDD, valWinRate, filename)
 
 	resultBacktest := fmt.Sprintf(
 		"РЕЗУЛЬТАТ БЕКТЕСТА\nПара: %s\nКоличество trials: %d\nКоличество дней на валидации: %d\nТаймдельта: %s\nКоличество свечей в сутках: %d\nКоличество сделок: %d\nКомбинированный Sharpe Ratio: %.2f\nВалидационный Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
-		pair, trials, validationSetDays, timeDelta, candlesPerDay, len(backtestOrders), combinedSharpeRatio, backtestSharpe, backtestCapital, backtestMaxDD, backtestWinRate, filename)
+		symbol, trials, validationSetDays, timeDelta, candlesPerDay, len(backtestOrders), combinedSharpeRatio, backtestSharpe, backtestCapital, backtestMaxDD, backtestWinRate, filename)
 
 	log.Info("optimization completed",
 		zap.Float64("combined_sharpe_ratio", combinedSharpeRatio),

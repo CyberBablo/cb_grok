@@ -37,7 +37,7 @@ type StrategyParams struct {
 	StochasticDPeriod int     `json:"stochastic_d_period,omitempty"` // Период для %D
 	StochasticWeight  float64 `json:"stochastic_weight,omitempty"`   // Вес для сигнала
 
-	Pair string `json:"pair,omitempty"`
+	Symbol string `json:"symbol,omitempty"`
 }
 
 type Signals struct {
