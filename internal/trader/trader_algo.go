@@ -9,7 +9,12 @@ import (
 func (t *trader) algo(candle models.OHLCV) (*Action, error) {
 	t.state.ohlcv = append(t.state.ohlcv, candle)
 
-	appliedOHLCV := t.strategy.Apply(t.state.ohlcv, t.model.StrategyParams)
+	appliedOHLCV := t.strategy.ApplyIndicators(t.state.ohlcv, t.model.StrategyParams)
+	if appliedOHLCV == nil {
+		return nil, nil
+	}
+
+	appliedOHLCV = t.strategy.ApplySignals(appliedOHLCV, t.model.StrategyParams)
 	if appliedOHLCV == nil {
 		return nil, nil
 	}
