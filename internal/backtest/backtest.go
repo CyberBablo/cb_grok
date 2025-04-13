@@ -33,7 +33,7 @@ func NewBacktest() Backtest {
 
 func (b *backtest) Run(ohlcv []models.OHLCV, params strategy.StrategyParams) (*BacktestResult, error) {
 	str := strategy.NewLinearBiasStrategy()
-	candles := str.Apply(ohlcv, params)
+	candles := str.ApplyIndicators(ohlcv, params)
 	if candles == nil {
 		return nil, fmt.Errorf("no candles after strategy apply")
 	}
@@ -52,8 +52,19 @@ func (b *backtest) Run(ohlcv []models.OHLCV, params strategy.StrategyParams) (*B
 	var orders []Order
 	portfolioValues := make([]float64, len(candles))
 
+	var valCandles []models.AppliedOHLCV
+	valCandles = append(valCandles, candles[0])
+
 	for i := 1; i < len(candles)-1; i++ {
-		signal := candles[i].Signal
+		var signal int
+		valCandles = append(valCandles, candles[i])
+		iterativeApply := str.ApplySignals(valCandles, params)
+		if len(iterativeApply) == 0 {
+			signal = 0
+		} else {
+			signal = iterativeApply[i].Signal
+		}
+
 		nextOpen := candles[i+1].Open
 		timestamp := candles[i+1].Timestamp
 		atr := candles[i].ATR
@@ -158,7 +169,6 @@ func (b *backtest) Run(ohlcv []models.OHLCV, params strategy.StrategyParams) (*B
 			MaxDrawdown:  maxDrawdown,
 			WinRate:      winRate,
 		}, nil
-
 	}
 
 	return &BacktestResult{

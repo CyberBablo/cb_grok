@@ -12,7 +12,7 @@ func NewLinearBiasStrategy() Strategy {
 	return &LinearBiasStrategy{}
 }
 
-func (s *LinearBiasStrategy) Apply(candles []models.OHLCV, params StrategyParams) []models.AppliedOHLCV {
+func (s *LinearBiasStrategy) ApplyIndicators(candles []models.OHLCV, params StrategyParams) []models.AppliedOHLCV {
 	// Обновлено условие: добавлен StochasticKPeriod для проверки минимальной длины данных
 	if len(candles) < max(params.MALongPeriod, params.EMALongPeriod, params.MACDLongPeriod, params.BollingerPeriod, params.StochasticKPeriod) {
 		return nil
@@ -60,43 +60,49 @@ func (s *LinearBiasStrategy) Apply(candles []models.OHLCV, params StrategyParams
 		})
 	}
 
-	for i := 1; i < len(appliedCandles); i++ {
+	return appliedCandles
+}
+
+func (s *LinearBiasStrategy) ApplySignals(candles []models.AppliedOHLCV, params StrategyParams) []models.AppliedOHLCV {
+	// Обновлено условие: добавлен StochasticKPeriod для проверки минимальной длины данных
+
+	for i := 1; i < len(candles); i++ {
 		// Добавлено поле StochasticSignal в инициализацию структуры Signals
 		signals := Signals{EMASignal: 0, RSISignal: 0, MACDSignal: 0, TrendSignal: 0, BBSignal: 0, StochasticSignal: 0}
 
-		if shortMA[i-1] > longMA[i-1] {
+		if candles[i-1].ShortMA > candles[i-1].LongMA {
 			signals.EMASignal = 1
-		} else if shortMA[i-1] < longMA[i-1] {
+		} else if candles[i-1].ShortMA < candles[i-1].LongMA {
 			signals.EMASignal = -1
 		}
-		if macd[i-1] > macdSignal[i-1] {
+		if candles[i-1].MACD > candles[i-1].MACDSignal {
 			signals.MACDSignal = 1
-		} else if macd[i-1] < macdSignal[i-1] {
+		} else if candles[i-1].MACD < candles[i-1].MACDSignal {
 			signals.MACDSignal = -1
 		}
 
-		if trend[i-1] && volatility[i-1] {
+		if candles[i-1].Trend && candles[i-1].Volatility {
 			signals.TrendSignal = 1
-		} else if !trend[i-1] && volatility[i-1] {
+		} else if !candles[i-1].Trend && candles[i-1].Volatility {
 			signals.TrendSignal = -1
 		}
 
-		if rsi[i-1] < params.BuyRSIThreshold {
+		if candles[i-1].RSI < params.BuyRSIThreshold {
 			signals.RSISignal = 1
-		} else if rsi[i-1] > params.SellRSIThreshold {
+		} else if candles[i-1].RSI > params.SellRSIThreshold {
 			signals.RSISignal = -1
 		}
 
-		if candles[i-1].Close < appliedCandles[i-1].LowerBB {
+		if candles[i-1].Close < candles[i-1].LowerBB {
 			signals.BBSignal = 1
-		} else if candles[i-1].Close > appliedCandles[i-1].UpperBB {
+		} else if candles[i-1].Close > candles[i-1].UpperBB {
 			signals.BBSignal = -1
 		}
 
 		// Добавлена логика сигналов для Stochastic Oscillator
-		if stochasticK[i-1] < 20 && stochasticK[i-1] > stochasticD[i-1] {
+		if candles[i-1].StochasticK < 20 && candles[i-1].StochasticK > candles[i-1].StochasticD {
 			signals.StochasticSignal = 1 // Покупка при пересечении снизу вверх в зоне перепроданности
-		} else if stochasticK[i-1] > 80 && stochasticK[i-1] < stochasticD[i-1] {
+		} else if candles[i-1].StochasticK > 80 && candles[i-1].StochasticK < candles[i-1].StochasticD {
 			signals.StochasticSignal = -1 // Продажа при пересечении сверху вниз в зоне перекупленности
 		}
 
@@ -123,37 +129,13 @@ func (s *LinearBiasStrategy) Apply(candles []models.OHLCV, params StrategyParams
 		signal = math.Tanh(signal)
 
 		if signal > params.BuySignalThreshold {
-			appliedCandles[i].Signal = 1
+			candles[i].Signal = 1
 		} else if signal < params.SellSignalThreshold {
-			appliedCandles[i].Signal = -1
+			candles[i].Signal = -1
 		} else {
-			appliedCandles[i].Signal = 0
+			candles[i].Signal = 0
 		}
 	}
 
-	return appliedCandles
-}
-
-func calculateATRMean(atr []float64) float64 {
-	if len(atr) == 0 {
-		return 0
-	}
-	sum := 0.0
-	for _, v := range atr {
-		sum += v
-	}
-	return sum / float64(len(atr))
-}
-
-func adjustPeriod(basePeriod int, atr []float64, atrMean float64) int {
-	if atrMean == 0 || len(atr) == 0 {
-		return basePeriod
-	}
-	// Адаптация периода: увеличиваем при высокой волатильности
-	adjustment := 1 + (atr[len(atr)-1] / atrMean)
-	adjusted := int(math.Round(float64(basePeriod) * adjustment))
-	if adjusted < 1 {
-		adjusted = 1
-	}
-	return adjusted
+	return candles
 }

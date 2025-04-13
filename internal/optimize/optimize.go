@@ -94,6 +94,7 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 				trainCandles:         trainCandles,
 				validationCandles:    validationCandles,
 				timePeriodMultiplier: timePeriodMultiplier,
+				validationSetDays:    params.ValidationSetDays,
 			}), params.Trials/params.Workers)
 		})
 	}

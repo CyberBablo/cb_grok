@@ -6,13 +6,13 @@ import (
 	"github.com/c-bata/goptuna"
 	"github.com/ethereum/go-ethereum/log"
 	"go.uber.org/zap"
-	"math"
 )
 
 type objectiveParams struct {
 	trainCandles         []models.OHLCV
 	validationCandles    []models.OHLCV
 	timePeriodMultiplier float64
+	validationSetDays    int
 }
 
 func (o *optimize) objective(params objectiveParams) func(trial goptuna.Trial) (float64, error) {
@@ -160,10 +160,7 @@ func (o *optimize) objective(params objectiveParams) func(trial goptuna.Trial) (
 			return trainBTResult.SharpeRatio, nil
 		}
 
-		//combinedSharpe := (valSharpe + trainSharpe) / 2 * math.Log(float64(len(valOrders)+1))
-
-		combinedSharpe := valBTResult.SharpeRatio * (1 - valBTResult.MaxDrawdown/100) * math.Log(float64(len(valBTResult.Orders)+1))
-		//combinedSharpe = combinedSharpe * valWinRate / 100
+		combinedSharpe := valBTResult.SharpeRatio * (1 - valBTResult.MaxDrawdown/100) * min(float64(len(valBTResult.Orders))/(float64(params.validationSetDays*2)), 1)
 
 		o.log.Info("Trial result",
 			zap.Int("trial", trial.ID),
