@@ -42,7 +42,7 @@ func runTrade(trade trader.Trader, log *zap.Logger, tg *telegram.TelegramService
 		return fmt.Errorf("error to load model: %w", err)
 	}
 
-	mockExch := exchange.NewMockExchange(log, tg)
+	mockExch := exchange.NewMockExchange()
 
 	trade.Setup(trader.TraderParams{
 		Model:          mod,

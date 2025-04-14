@@ -1,6 +1,7 @@
 package optimize
 
 import (
+	"bytes"
 	"cb_grok/config"
 	"cb_grok/internal/backtest"
 	"cb_grok/internal/exchange"
@@ -13,9 +14,10 @@ import (
 	"fmt"
 	"github.com/c-bata/goptuna"
 	"github.com/c-bata/goptuna/tpe"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/dnlo/struct2csv"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	"time"
 )
 
 type Optimize interface {
@@ -39,13 +41,13 @@ func NewOptimize(log *zap.Logger, bt backtest.Backtest, tg *telegram.TelegramSer
 
 func (o *optimize) Run(params RunOptimizeParams) error {
 	if params.ValidationSetDays <= 0 {
-		log.Error("Validation days must be greater than 0")
+		o.log.Error("Validation days must be greater than 0")
 		return fmt.Errorf("validation days must be greater than 0")
 	}
 
 	ex, err := exchange.NewBinance(false, o.cfg.Binance.ApuPublic, o.cfg.Binance.ApiSecret, o.cfg.Binance.ProxyUrl)
 	if err != nil {
-		log.Error("optimize: initialize Binance exchange", zap.Error(err))
+		o.log.Error("optimize: initialize Binance exchange", zap.Error(err))
 		return err
 	}
 
@@ -55,23 +57,23 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 	candles, err := ex.FetchOHLCV(params.Symbol, params.Timeframe, params.CandlesTotal)
 
 	if err != nil {
-		log.Error("optimize: fetch OHLCV", zap.Error(err))
+		o.log.Error("optimize: fetch ohlcv", zap.Error(err))
 		return err
 	}
 
-	log.Info("optimize: OHLCV data", zap.Int("length", len(candles)))
+	o.log.Info("optimize: ohlcv data", zap.Int("length", len(candles)))
 
 	validationCandlesCount := params.ValidationSetDays * candlesPerDay
 
 	if validationCandlesCount >= len(candles) {
-		log.Error("Validation set is larger than the available data")
+		o.log.Error("Validation set is larger than the available data")
 		return fmt.Errorf("validation set is larger than the available data")
 	}
 
 	validationCandles := candles[len(candles)-validationCandlesCount:]
 	trainCandles := candles[:len(candles)-validationCandlesCount]
 
-	log.Info("optimize: datasets prepared",
+	o.log.Info("optimize: datasets prepared",
 		zap.Int("train_candles", len(trainCandles)),
 		zap.Int("validation_candles", len(validationCandles)))
 
@@ -81,7 +83,7 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 		goptuna.StudyOptionSampler(tpe.NewSampler()),
 	)
 	if err != nil {
-		log.Error("optimize: create study", zap.Error(err))
+		o.log.Error("optimize: create study", zap.Error(err))
 		return err
 	}
 
@@ -91,6 +93,7 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 	for i := 0; i < params.Workers; i++ {
 		eg.Go(func() error {
 			return study.Optimize(o.objective(objectiveParams{
+				symbol:               params.Symbol,
 				trainCandles:         trainCandles,
 				validationCandles:    validationCandles,
 				timePeriodMultiplier: timePeriodMultiplier,
@@ -100,43 +103,46 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 	}
 
 	if err = eg.Wait(); err != nil {
-		log.Error("Optimize error %v", zap.Error(err))
+		o.log.Error("Optimize error %v", zap.Error(err))
 		return err
 	}
 
 	bestParams, err := study.GetBestParams()
 	if err != nil {
-		log.Error("optimize: get best params", zap.Error(err))
+		o.log.Error("optimize: get best params", zap.Error(err))
 		return err
 	}
 	combinedSharpeRatio, err := study.GetBestValue()
 	if err != nil {
-		log.Error("optimize: get best value", zap.Error(err))
+		o.log.Error("optimize: get best value", zap.Error(err))
 		return err
 	}
 
 	b, err := json.Marshal(bestParams)
 	if err != nil {
-		log.Error("optimize: best params marshal", zap.Error(err))
+		o.log.Error("optimize: best params marshal", zap.Error(err))
 		return err
 	}
 
 	var bestStrategyParams strategy.StrategyParams
 	err = json.Unmarshal(b, &bestStrategyParams)
 	if err != nil {
-		log.Error("optimize: best params marshal", zap.Error(err))
+		o.log.Error("optimize: best params marshal", zap.Error(err))
 		return err
 	}
 
-	valBTResult, err := o.bt.Run(validationCandles, bestStrategyParams)
+	valBTResult, err := o.bt.Run(validationCandles, &model.Model{
+		Symbol:         params.Symbol,
+		StrategyParams: bestStrategyParams,
+	})
 	if err != nil {
-		log.Error("optimize: final validation backtest", zap.Error(err))
+		o.log.Error("optimize: final validation backtest", zap.Error(err))
 		return err
 	}
 
 	fmt.Println("ORDER HISTORY")
 	for _, order := range valBTResult.Orders {
-		log.Info(fmt.Sprintf("Order: %v", order))
+		o.log.Info(fmt.Sprintf("Order: %v", order))
 	}
 
 	filename := model.Save(model.Model{
@@ -145,9 +151,6 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 	})
 
 	orderCount := len(valBTResult.Orders)
-	result := fmt.Sprintf(
-		"Символ: %s\nКоличество trials: %d\nКоличество дней на валидации: %d\nTimeframe: %s\nКоличество свечей в сутках: %d\nКоличество сделок: %d\nКомбинированный Sharpe Ratio: %.2f\nВалидационный Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
-		params.Symbol, params.Trials, params.ValidationSetDays, params.Timeframe, candlesPerDay, orderCount, combinedSharpeRatio, valBTResult.SharpeRatio, valBTResult.FinalCapital, valBTResult.MaxDrawdown, valBTResult.WinRate, filename)
 
 	o.log.Info("optimization completed",
 		zap.Float64("combined_sharpe_ratio", combinedSharpeRatio),
@@ -155,7 +158,49 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 		zap.Float64("validation_max_drawdown", valBTResult.MaxDrawdown),
 		zap.Float64("validation_win_rate", valBTResult.WinRate),
 		zap.String("filename", filename))
-	o.tg.SendMessage(result)
+
+	result := fmt.Sprintf(
+		"Символ: %s\nКоличество trials: %d\nКоличество дней на валидации: %d\nTimeframe: %s\nКоличество свечей в сутках: %d\nКоличество сделок: %d\nКомбинированный Sharpe Ratio: %.2f\nВалидационный Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
+		params.Symbol, params.Trials, params.ValidationSetDays, params.Timeframe, candlesPerDay, orderCount, combinedSharpeRatio, valBTResult.SharpeRatio, valBTResult.FinalCapital, valBTResult.MaxDrawdown, valBTResult.WinRate, filename)
+
+	if len(valBTResult.Orders) > 0 {
+		buff := &bytes.Buffer{}
+		w := struct2csv.NewWriter(buff)
+		err = w.Write([]string{"timestamp", "side", "trigger", "price", "asset_amount", "asset_currency", "portfolio_value"})
+		if err != nil {
+			o.log.Error("report: write col names", zap.Error(err))
+		}
+		for _, v := range valBTResult.Orders {
+			var row []string
+			row = append(row, time.UnixMilli(v.Timestamp).String())
+			row = append(row, string(v.Decision))
+			row = append(row, string(v.DecisionTrigger))
+			row = append(row, fmt.Sprint(v.Price))
+			row = append(row, fmt.Sprint(v.AssetAmount))
+			row = append(row, v.AssetCurrency)
+			row = append(row, fmt.Sprint(v.PortfolioValue))
+			err = w.Write(row)
+			if err != nil {
+				o.log.Error("report: write structs", zap.Error(err))
+			}
+		}
+		w.Flush()
+
+		err = o.tg.SendFile(buff, "csv", result)
+		if err != nil {
+			o.log.Error("report: send to telegram", zap.Error(err))
+		}
+	}
+
+	time.Sleep(1000 * time.Millisecond)
+	chartBuff, err := o.generateCharts(valBTResult.TradeState)
+	if err != nil {
+		o.log.Error("report: generate charts", zap.Error(err))
+	}
+	err = o.tg.SendFile(chartBuff, "html", "Отчет по симуляции")
+	if err != nil {
+		o.log.Error("report: send to telegram", zap.Error(err))
+	}
 
 	return nil
 }

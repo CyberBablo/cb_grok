@@ -23,11 +23,12 @@ type TraderSettings struct {
 	TakeProfitMultiplier float64
 }
 
-type traderState struct {
+type state struct {
 	initialCapital float64
 
-	ohlcv  []models.OHLCV
-	events []Action
+	ohlcv           []models.OHLCV
+	orders          []Action
+	portfolioValues []PortfolioValue
 
 	cash           float64
 	assets         float64
@@ -36,10 +37,16 @@ type traderState struct {
 	takeProfit     float64
 }
 
+type PortfolioValue struct {
+	Timestamp int64
+	Value     float64
+}
+
 type Action struct {
 	Timestamp       int64
 	Decision        TradeDecision
 	DecisionTrigger TradeDecisionTrigger
+	Price           float64
 	AssetAmount     float64
 	AssetCurrency   string
 	Comment         string

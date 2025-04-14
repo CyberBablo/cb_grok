@@ -58,7 +58,7 @@ func (t *trader) Run(mode TradeMode) error {
 			continue
 		}
 
-		action, err := t.algo(candle)
+		action, err := t.processAlgo(candle)
 		if err != nil {
 			t.log.Error("trade algo error", zap.Error(err), zap.String("message", string(message)))
 			t.tg.SendMessage(fmt.Sprintf("trade algo error: %s\n\nMessage: %s", err.Error(), string(message)))
@@ -81,27 +81,27 @@ func (t *trader) Run(mode TradeMode) error {
 	}
 
 	if mode == ModeSimulation {
-		t.log.Info("simulation results", zap.Int("num_orders", len(t.state.events)), zap.Float64("tpv", tpv))
-
-		path, err := generateSimulationReport(*t.state)
-		if err != nil {
-			t.log.Error("generate report", zap.Error(err))
-			return nil
-		}
-
-		t.tg.SendFile(
-			path,
-			fmt.Sprintf(
-				"simulation result:\n\nnum_orders: %d\ntpv: %.2f USDT",
-				len(t.state.events),
-				tpv,
-			),
-		)
+		t.log.Info("simulation results", zap.Int("num_orders", len(t.state.orders)), zap.Float64("tpv", tpv))
+		//
+		//path, err := generateSimulationReport(*t.state)
+		//if err != nil {
+		//	t.log.Error("generate report", zap.Error(err))
+		//	return nil
+		//}
+		//
+		//t.tg.SendFile(
+		//	path,
+		//	fmt.Sprintf(
+		//		"simulation result:\n\nnum_orders: %d\ntpv: %.2f USDT",
+		//		len(t.state.orders),
+		//		tpv,
+		//	),
+		//)
 	}
 	return nil
 }
 
-func generateSimulationReport(state traderState) (string, error) {
+func generateSimulationReport(state state) (string, error) {
 	dir := "lib/simulation_report"
 	_ = os.Mkdir(dir, os.ModePerm)
 
@@ -119,7 +119,7 @@ func generateSimulationReport(state traderState) (string, error) {
 		})
 	}
 
-	for _, e := range state.events {
+	for _, e := range state.orders {
 		events = append(events, tachart.Event{
 			Type:        lo.If(e.Decision == DecisionBuy, tachart.Long).Else(tachart.Short),
 			Label:       time.UnixMilli(e.Timestamp).Format("2006-01-02 15:04"),

@@ -1,6 +1,7 @@
 package optimize
 
 import (
+	"cb_grok/internal/model"
 	"cb_grok/internal/strategy"
 	"cb_grok/pkg/models"
 	"github.com/c-bata/goptuna"
@@ -9,6 +10,7 @@ import (
 )
 
 type objectiveParams struct {
+	symbol               string
 	trainCandles         []models.OHLCV
 	validationCandles    []models.OHLCV
 	timePeriodMultiplier float64
@@ -149,12 +151,18 @@ func (o *optimize) objective(params objectiveParams) func(trial goptuna.Trial) (
 			StochasticWeight:    stochasticWeight,
 		}
 
-		trainBTResult, err := o.bt.Run(params.trainCandles, strategyParams)
+		trainBTResult, err := o.bt.Run(params.trainCandles, &model.Model{
+			Symbol:         params.symbol,
+			StrategyParams: strategyParams,
+		})
 		if err != nil {
 			return 0, err
 		}
 
-		valBTResult, err := o.bt.Run(params.validationCandles, strategyParams)
+		valBTResult, err := o.bt.Run(params.validationCandles, &model.Model{
+			Symbol:         params.symbol,
+			StrategyParams: strategyParams,
+		})
 		if err != nil {
 			log.Warn("Failed to run backtest on validation set", zap.Error(err))
 			return trainBTResult.SharpeRatio, nil

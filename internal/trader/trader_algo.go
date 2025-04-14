@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func (t *trader) algo(candle models.OHLCV) (*Action, error) {
+func (t *trader) processAlgo(candle models.OHLCV) (*Action, error) {
 	t.state.ohlcv = append(t.state.ohlcv, candle)
 
 	appliedOHLCV := t.strategy.ApplyIndicators(t.state.ohlcv, t.model.StrategyParams)
@@ -14,6 +14,20 @@ func (t *trader) algo(candle models.OHLCV) (*Action, error) {
 		return nil, nil
 	}
 
+	return t.algo(appliedOHLCV)
+}
+
+func (t *trader) BacktestAlgo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
+	tmpOHLCV := make([]models.OHLCV, len(appliedOHLCV))
+	for i := range appliedOHLCV {
+		tmpOHLCV[i] = appliedOHLCV[i].OHLCV
+	}
+	t.state.ohlcv = tmpOHLCV
+
+	return t.algo(appliedOHLCV)
+}
+
+func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 	appliedOHLCV = t.strategy.ApplySignals(appliedOHLCV, t.model.StrategyParams)
 	if appliedOHLCV == nil {
 		return nil, nil
@@ -107,11 +121,16 @@ func (t *trader) algo(candle models.OHLCV) (*Action, error) {
 	}
 
 	portfolioValue := t.state.cash + t.state.assets*currentPrice
+	t.state.portfolioValues = append(t.state.portfolioValues, PortfolioValue{
+		Timestamp: currentCandle.Timestamp,
+		Value:     portfolioValue,
+	})
 
 	action := Action{
 		Timestamp:       currentCandle.Timestamp,
 		Decision:        decision,
 		DecisionTrigger: decisionTrigger,
+		Price:           currentPrice,
 		AssetAmount:     transactionAmount,
 		AssetCurrency:   strings.Split(t.model.Symbol, "/")[0],
 		Comment:         "",
@@ -119,7 +138,7 @@ func (t *trader) algo(candle models.OHLCV) (*Action, error) {
 	}
 
 	if action.Decision != DecisionHold {
-		t.state.events = append(t.state.events, action)
+		t.state.orders = append(t.state.orders, action)
 	}
 
 	return &action, nil

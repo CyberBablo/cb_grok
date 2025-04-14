@@ -1,8 +1,11 @@
 package backtest
 
+import "cb_grok/internal/trader"
+
 type BacktestResult struct {
 	SharpeRatio  float64
-	Orders       []Order
+	Orders       []trader.Action
+	TradeState   trader.State
 	FinalCapital float64
 	MaxDrawdown  float64
 	WinRate      float64

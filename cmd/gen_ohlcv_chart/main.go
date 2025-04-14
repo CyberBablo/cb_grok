@@ -21,11 +21,11 @@ func main() {
 
 	candles, err := ex.FetchOHLCV("BNB/USDT", "1h", 3000)
 	if err != nil {
-		log.Error("optimize: fetch OHLCV", zap.Error(err))
+		log.Error("optimize: fetch ohlcv", zap.Error(err))
 		return
 	}
 
-	log.Info("fetch OHLCV", zap.Int("length", len(candles)))
+	log.Info("fetch ohlcv", zap.Int("length", len(candles)))
 	log.Info(fmt.Sprintf("Candles[0]: %+v", candles[0]))
 	log.Info(fmt.Sprintf("Candles[%d]: %+v", len(candles)-1, candles[len(candles)-1]))
 

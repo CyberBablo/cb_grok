@@ -1,18 +1,14 @@
 package exchange
 
 import (
-	"cb_grok/internal/telegram"
 	"cb_grok/pkg/models"
-	"go.uber.org/zap"
 )
 
 type mockImpl struct {
-	logger *zap.Logger
-	tg     *telegram.TelegramService
 }
 
-func NewMockExchange(logger *zap.Logger, tg *telegram.TelegramService) Exchange {
-	return &mockImpl{logger: logger, tg: tg}
+func NewMockExchange() Exchange {
+	return &mockImpl{}
 }
 
 func (e *mockImpl) FetchOHLCV(symbol, timeframe string, limit int) ([]models.OHLCV, error) {
@@ -20,14 +16,6 @@ func (e *mockImpl) FetchOHLCV(symbol, timeframe string, limit int) ([]models.OHL
 }
 
 func (e *mockImpl) CreateOrder(symbol, side string, amount float64, stopLoss, takeProfit float64) error {
-	e.logger.Info("Mock order created",
-		zap.String("symbol", symbol),
-		zap.String("side", side),
-		zap.Float64("amount", amount),
-		zap.Float64("stop_loss", stopLoss),
-		zap.Float64("take_profit", takeProfit))
-
-	//e.tg.SendMessage("Mock order created")
 
 	return nil
 }

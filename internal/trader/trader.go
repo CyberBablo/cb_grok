@@ -5,6 +5,7 @@ import (
 	"cb_grok/internal/model"
 	"cb_grok/internal/strategy"
 	"cb_grok/internal/telegram"
+	"cb_grok/pkg/models"
 	"go.uber.org/zap"
 )
 
@@ -39,13 +40,26 @@ var (
 type Trader interface {
 	Setup(params TraderParams)
 	Run(mode TradeMode) error
+	BacktestAlgo(appliedOHLCV []models.AppliedOHLCV) (*Action, error)
+	GetState() State
+}
+
+type State interface {
+	GetOrders() []Action
+	GetOHLCV() []models.OHLCV
+	GetPortfolioValue() float64
+	GetPortfolioValues() []PortfolioValue
+	CalculateWinRate() float64
+	CalculateMaxDrawdown() float64
+	CalculateSharpeRatio() float64
+	GetInitialCapital() float64
 }
 
 type trader struct {
 	model    *model.Model
 	strategy strategy.Strategy
 	exch     exchange.Exchange
-	state    *traderState
+	state    *state
 	settings *TraderSettings
 
 	tg  *telegram.TelegramService
@@ -73,8 +87,15 @@ func (t *trader) Setup(params TraderParams) {
 	}
 }
 
-func (t *trader) initState(initialCapital float64) *traderState {
-	return &traderState{
+func (t *trader) GetState() State {
+	if t.state == nil {
+		return nil
+	}
+	return t.state
+}
+
+func (t *trader) initState(initialCapital float64) *state {
+	return &state{
 		initialCapital: initialCapital,
 		cash:           initialCapital,
 	}

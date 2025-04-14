@@ -74,7 +74,7 @@ func runServer(log *zap.Logger, symbol string, timeframe string, tradingDays int
 		return err
 	}
 
-	log.Info("simulate: OHLCV data", zap.Int("length", len(candles)))
+	log.Info("simulate: ohlcv data", zap.Int("length", len(candles)))
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
