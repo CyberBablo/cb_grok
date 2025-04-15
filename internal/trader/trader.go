@@ -1,6 +1,7 @@
 package trader
 
 import (
+	"bytes"
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/model"
 	"cb_grok/internal/strategy"
@@ -42,6 +43,7 @@ type Trader interface {
 	Run(mode TradeMode) error
 	BacktestAlgo(appliedOHLCV []models.AppliedOHLCV) (*Action, error)
 	GetState() State
+	ProcessAlgo(candle models.OHLCV) (*Action, error)
 }
 
 type State interface {
@@ -53,6 +55,8 @@ type State interface {
 	CalculateMaxDrawdown() float64
 	CalculateSharpeRatio() float64
 	GetInitialCapital() float64
+
+	GenerateCharts() (*bytes.Buffer, error)
 }
 
 type trader struct {

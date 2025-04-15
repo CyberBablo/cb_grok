@@ -1,14 +1,13 @@
 package trader
 
 import (
+	"bytes"
 	"cb_grok/pkg/models"
 	"encoding/json"
 	"fmt"
+	"github.com/dnlo/struct2csv"
 	"github.com/gorilla/websocket"
-	"github.com/iamjinlei/go-tachart/tachart"
-	"github.com/samber/lo"
 	"go.uber.org/zap"
-	"os"
 	"time"
 )
 
@@ -82,64 +81,47 @@ func (t *trader) Run(mode TradeMode) error {
 
 	if mode == ModeSimulation {
 		t.log.Info("simulation results", zap.Int("num_orders", len(t.state.orders)), zap.Float64("tpv", tpv))
-		//
-		//path, err := generateSimulationReport(*t.state)
-		//if err != nil {
-		//	t.log.Error("generate report", zap.Error(err))
-		//	return nil
-		//}
-		//
-		//t.tg.SendFile(
-		//	path,
-		//	fmt.Sprintf(
-		//		"simulation result:\n\nnum_orders: %d\ntpv: %.2f USDT",
-		//		len(t.state.orders),
-		//		tpv,
-		//	),
-		//)
+
+		result := fmt.Sprintf(
+			"Результат симуляции\n\nСимвол: %s\nКоличество сделок: %d\nSharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f",
+			t.model.Symbol, len(t.state.GetOrders()), t.state.CalculateSharpeRatio(), t.state.GetPortfolioValue(), t.state.CalculateMaxDrawdown(), t.state.CalculateWinRate())
+
+		buff := &bytes.Buffer{}
+		w := struct2csv.NewWriter(buff)
+		err = w.Write([]string{"timestamp", "side", "trigger", "price", "asset_amount", "asset_currency", "portfolio_value"})
+		if err != nil {
+			t.log.Error("report: write col names", zap.Error(err))
+		}
+		for _, v := range t.state.GetOrders() {
+			var row []string
+			row = append(row, time.UnixMilli(v.Timestamp).String())
+			row = append(row, string(v.Decision))
+			row = append(row, string(v.DecisionTrigger))
+			row = append(row, fmt.Sprint(v.Price))
+			row = append(row, fmt.Sprint(v.AssetAmount))
+			row = append(row, v.AssetCurrency)
+			row = append(row, fmt.Sprint(v.PortfolioValue))
+			err = w.Write(row)
+			if err != nil {
+				t.log.Error("report: write structs", zap.Error(err))
+			}
+		}
+		w.Flush()
+
+		err = t.tg.SendFile(buff, "csv", result)
+		if err != nil {
+			t.log.Error("report: send to telegram", zap.Error(err))
+		}
+
+		time.Sleep(1000 * time.Millisecond)
+		chartBuff, err := t.state.GenerateCharts()
+		if err != nil {
+			t.log.Error("report: generate charts", zap.Error(err))
+		}
+		err = t.tg.SendFile(chartBuff, "html", "Отчет по симуляции")
+		if err != nil {
+			t.log.Error("report: send to telegram", zap.Error(err))
+		}
 	}
 	return nil
-}
-
-func generateSimulationReport(state state) (string, error) {
-	dir := "lib/simulation_report"
-	_ = os.Mkdir(dir, os.ModePerm)
-
-	var chartCandles []tachart.Candle
-	var events []tachart.Event
-
-	for _, c := range state.ohlcv {
-		chartCandles = append(chartCandles, tachart.Candle{
-			Label: time.UnixMilli(c.Timestamp).Format("2006-01-02 15:04"),
-			O:     c.Open,
-			H:     c.High,
-			L:     c.Low,
-			C:     c.Close,
-			V:     c.Volume,
-		})
-	}
-
-	for _, e := range state.orders {
-		events = append(events, tachart.Event{
-			Type:        lo.If(e.Decision == DecisionBuy, tachart.Long).Else(tachart.Short),
-			Label:       time.UnixMilli(e.Timestamp).Format("2006-01-02 15:04"),
-			Description: string(e.DecisionTrigger),
-		})
-	}
-
-	cfg := tachart.NewConfig().
-		SetChartWidth(1080).
-		SetChartHeight(800).
-		UseRepoAssets() // serving assets file from current repo, avoid network access
-
-	c := tachart.New(*cfg)
-
-	timestamp := time.Now().Format("20060102_150405")
-	path := fmt.Sprintf("%s/simulation_%s.html", dir, timestamp)
-
-	err := c.GenStatic(chartCandles, events, path)
-	if err != nil {
-		return "", err
-	}
-	return path, nil
 }

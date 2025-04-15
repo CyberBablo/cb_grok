@@ -6,6 +6,9 @@ import (
 	"strings"
 )
 
+func (t *trader) ProcessAlgo(candle models.OHLCV) (*Action, error) {
+	return t.processAlgo(candle)
+}
 func (t *trader) processAlgo(candle models.OHLCV) (*Action, error) {
 	t.state.ohlcv = append(t.state.ohlcv, candle)
 

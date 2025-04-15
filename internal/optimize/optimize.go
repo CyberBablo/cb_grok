@@ -104,7 +104,7 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 				trainCandles:         objTrainCandles,
 				validationCandles:    objValCandles,
 				timePeriodMultiplier: timePeriodMultiplier,
-				validationSetDays:    params.ValidationSetDays,
+				validationSetDays:    params.ObjValidationSetDays,
 			}), params.Trials/params.Workers)
 		})
 	}
@@ -198,7 +198,7 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 	}
 
 	time.Sleep(1000 * time.Millisecond)
-	chartBuff, err := o.generateCharts(valBTResult.TradeState)
+	chartBuff, err := valBTResult.TradeState.GenerateCharts()
 	if err != nil {
 		o.log.Error("report: generate charts", zap.Error(err))
 	}
