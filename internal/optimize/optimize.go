@@ -170,33 +170,31 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 		"Символ: %s\nКоличество trials: %d\nКоличество дней на валидации: %d\nTimeframe: %s\nКоличество свечей в сутках: %d\nКоличество сделок: %d\nКомбинированный Sharpe Ratio: %.2f\nВалидационный Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
 		params.Symbol, params.Trials, params.ValidationSetDays, params.Timeframe, candlesPerDay, orderCount, combinedSharpeRatio, valBTResult.SharpeRatio, valBTResult.FinalCapital, valBTResult.MaxDrawdown, valBTResult.WinRate, filename)
 
-	if len(valBTResult.Orders) > 0 {
-		buff := &bytes.Buffer{}
-		w := struct2csv.NewWriter(buff)
-		err = w.Write([]string{"timestamp", "side", "trigger", "price", "asset_amount", "asset_currency", "portfolio_value"})
+	buff := &bytes.Buffer{}
+	w := struct2csv.NewWriter(buff)
+	err = w.Write([]string{"timestamp", "side", "trigger", "price", "asset_amount", "asset_currency", "portfolio_value"})
+	if err != nil {
+		o.log.Error("report: write col names", zap.Error(err))
+	}
+	for _, v := range valBTResult.Orders {
+		var row []string
+		row = append(row, time.UnixMilli(v.Timestamp).String())
+		row = append(row, string(v.Decision))
+		row = append(row, string(v.DecisionTrigger))
+		row = append(row, fmt.Sprint(v.Price))
+		row = append(row, fmt.Sprint(v.AssetAmount))
+		row = append(row, v.AssetCurrency)
+		row = append(row, fmt.Sprint(v.PortfolioValue))
+		err = w.Write(row)
 		if err != nil {
-			o.log.Error("report: write col names", zap.Error(err))
+			o.log.Error("report: write structs", zap.Error(err))
 		}
-		for _, v := range valBTResult.Orders {
-			var row []string
-			row = append(row, time.UnixMilli(v.Timestamp).String())
-			row = append(row, string(v.Decision))
-			row = append(row, string(v.DecisionTrigger))
-			row = append(row, fmt.Sprint(v.Price))
-			row = append(row, fmt.Sprint(v.AssetAmount))
-			row = append(row, v.AssetCurrency)
-			row = append(row, fmt.Sprint(v.PortfolioValue))
-			err = w.Write(row)
-			if err != nil {
-				o.log.Error("report: write structs", zap.Error(err))
-			}
-		}
-		w.Flush()
+	}
+	w.Flush()
 
-		err = o.tg.SendFile(buff, "csv", result)
-		if err != nil {
-			o.log.Error("report: send to telegram", zap.Error(err))
-		}
+	err = o.tg.SendFile(buff, "csv", result)
+	if err != nil {
+		o.log.Error("report: send to telegram", zap.Error(err))
 	}
 
 	time.Sleep(1000 * time.Millisecond)
