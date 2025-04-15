@@ -69,7 +69,12 @@ func runServer(log *zap.Logger, symbol string, timeframe string, tradingDays int
 		return err
 	}
 
-	candles, err := ex.FetchOHLCV(symbol, timeframe, calculateLimitFromTimeframeAndDays(timeframe, tradingDays))
+	timeframeSec := utils.TimeframeToMilliseconds(timeframe) / 1000
+	candlesPerDay := (24 * 60 * 60) / int(timeframeSec)
+
+	totalCandles := tradingDays * candlesPerDay
+
+	candles, err := ex.FetchOHLCV(symbol, timeframe, totalCandles)
 	if err != nil {
 		return err
 	}
@@ -116,8 +121,4 @@ func runServer(log *zap.Logger, symbol string, timeframe string, tradingDays int
 	}
 
 	return nil
-}
-
-func calculateLimitFromTimeframeAndDays(tf string, daysNum int) int {
-	return int((utils.TimeframeToMilliseconds("1d")*int64(daysNum))/utils.TimeframeToMilliseconds(tf)) + 1
 }

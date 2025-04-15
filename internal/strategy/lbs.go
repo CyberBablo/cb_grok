@@ -41,20 +41,19 @@ func (s *LinearBiasStrategy) ApplyIndicators(candles []models.OHLCV, params Stra
 	var appliedCandles []models.AppliedOHLCV
 	for i := range candles {
 		appliedCandles = append(appliedCandles, models.AppliedOHLCV{
-			OHLCV:      candles[i],
-			ATR:        atr[i],
-			RSI:        rsi[i],
-			ShortMA:    shortMA[i],
-			LongMA:     longMA[i],
-			ShortEMA:   emaShort[i],
-			LongEMA:    emaLong[i],
-			Trend:      trend[i],
-			Volatility: volatility[i],
-			MACD:       macd[i],
-			MACDSignal: macdSignal[i],
-			UpperBB:    upperBB[i],
-			LowerBB:    lowerBB[i],
-			// Добавлены поля для Stochastic Oscillator
+			OHLCV:       candles[i],
+			ATR:         atr[i],
+			RSI:         rsi[i],
+			ShortMA:     shortMA[i],
+			LongMA:      longMA[i],
+			ShortEMA:    emaShort[i],
+			LongEMA:     emaLong[i],
+			Trend:       trend[i],
+			Volatility:  volatility[i],
+			MACD:        macd[i],
+			MACDSignal:  macdSignal[i],
+			UpperBB:     upperBB[i],
+			LowerBB:     lowerBB[i],
 			StochasticK: stochasticK[i],
 			StochasticD: stochasticD[i],
 		})
