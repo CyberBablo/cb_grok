@@ -25,30 +25,33 @@ func main() {
 
 func runOptimization(opt optimize.Optimize) error {
 	var (
-		validationSetDays int
-		symbol            string
-		timeframe         string
-		trials            int
-		candlesTotal      int
-		workers           int
+		validationSetDays    int
+		objValidationSetDays int
+		objTrainingSetDays   int
+		symbol               string
+		timeframe            string
+		trials               int
+		workers              int
 	)
 
 	flag.StringVar(&symbol, "symbol", "", "Symbol (f.e BNB/USDT)")
 	flag.StringVar(&timeframe, "timeframe", "", "Timeframe (f.e 1h)")
 	flag.IntVar(&trials, "trials", 100, "Number of trials")
 	flag.IntVar(&validationSetDays, "val-set-days", 0, "Number of days for validation set")
-	flag.IntVar(&candlesTotal, "candles-total", 1000, "Count of candles in the dataset")
+	flag.IntVar(&objValidationSetDays, "obj-val-set-days", 0, "Number of days for objective validation set")
+	flag.IntVar(&objTrainingSetDays, "obj-train-set-days", 0, "Number of days for objective training set")
 	flag.IntVar(&workers, "workers", 2, "Number of parallel workers")
 
 	flag.Parse()
 
 	return opt.Run(optimize.RunOptimizeParams{
-		Symbol:            symbol,
-		Timeframe:         timeframe,
-		ValidationSetDays: validationSetDays,
-		Trials:            trials,
-		CandlesTotal:      candlesTotal,
-		Workers:           workers,
+		Symbol:               symbol,
+		Timeframe:            timeframe,
+		ValidationSetDays:    validationSetDays,
+		ObjValidationSetDays: objValidationSetDays,
+		ObjTrainingSetDays:   objTrainingSetDays,
+		Trials:               trials,
+		Workers:              workers,
 	})
 }
 

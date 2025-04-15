@@ -51,10 +51,13 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 		return err
 	}
 
-	secondsOfDelta := utils.TimeframeToMilliseconds(params.Timeframe) / 1000
-	timePeriodMultiplier := float64(60 * 60 / secondsOfDelta)
-	candlesPerDay := (24 * 60 * 60) / int(secondsOfDelta)
-	candles, err := ex.FetchOHLCV(params.Symbol, params.Timeframe, params.CandlesTotal)
+	timeframeSec := utils.TimeframeToMilliseconds(params.Timeframe) / 1000
+	timePeriodMultiplier := float64(60 * 60 / timeframeSec)
+	candlesPerDay := (24 * 60 * 60) / int(timeframeSec)
+
+	candlesTotal := (params.ObjTrainingSetDays + params.ObjValidationSetDays + params.ValidationSetDays) * candlesPerDay
+
+	candles, err := ex.FetchOHLCV(params.Symbol, params.Timeframe, candlesTotal)
 
 	if err != nil {
 		o.log.Error("optimize: fetch ohlcv", zap.Error(err))
@@ -63,19 +66,23 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 
 	o.log.Info("optimize: ohlcv data", zap.Int("length", len(candles)))
 
-	validationCandlesCount := params.ValidationSetDays * candlesPerDay
+	valCandlesCount := params.ValidationSetDays * candlesPerDay
+	objValCandlesCount := params.ObjValidationSetDays * candlesPerDay
+	objTrainCandlesCount := params.ObjTrainingSetDays * candlesPerDay
 
-	if validationCandlesCount >= len(candles) {
-		o.log.Error("Validation set is larger than the available data")
-		return fmt.Errorf("validation set is larger than the available data")
+	if (valCandlesCount + objValCandlesCount + objTrainCandlesCount) > len(candles) {
+		return fmt.Errorf("summary sets is larger than the available data")
 	}
 
-	validationCandles := candles[len(candles)-validationCandlesCount:]
-	trainCandles := candles[:len(candles)-validationCandlesCount]
+	objTrainCandles := candles[:objTrainCandlesCount]
+	objValCandles := candles[objTrainCandlesCount : len(candles)-valCandlesCount]
+	valCandles := candles[len(candles)-valCandlesCount:]
 
 	o.log.Info("optimize: datasets prepared",
-		zap.Int("train_candles", len(trainCandles)),
-		zap.Int("validation_candles", len(validationCandles)))
+		zap.Int("obj_train_candles", len(objTrainCandles)),
+		zap.Int("obj_val_candles", len(objValCandles)),
+		zap.Int("val_candles", len(valCandles)),
+	)
 
 	study, err := goptuna.CreateStudy(
 		"strategy_1",
@@ -94,8 +101,8 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 		eg.Go(func() error {
 			return study.Optimize(o.objective(objectiveParams{
 				symbol:               params.Symbol,
-				trainCandles:         trainCandles,
-				validationCandles:    validationCandles,
+				trainCandles:         objTrainCandles,
+				validationCandles:    objValCandles,
 				timePeriodMultiplier: timePeriodMultiplier,
 				validationSetDays:    params.ValidationSetDays,
 			}), params.Trials/params.Workers)
@@ -131,7 +138,7 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 		return err
 	}
 
-	valBTResult, err := o.bt.Run(validationCandles, &model.Model{
+	valBTResult, err := o.bt.Run(valCandles, &model.Model{
 		Symbol:         params.Symbol,
 		StrategyParams: bestStrategyParams,
 	})
