@@ -40,11 +40,6 @@ func NewOptimize(log *zap.Logger, bt backtest.Backtest, tg *telegram.TelegramSer
 }
 
 func (o *optimize) Run(params RunOptimizeParams) error {
-	if params.ValidationSetDays <= 0 {
-		o.log.Error("Validation days must be greater than 0")
-		return fmt.Errorf("validation days must be greater than 0")
-	}
-
 	ex, err := exchange.NewBinance(false, o.cfg.Binance.ApuPublic, o.cfg.Binance.ApiSecret, o.cfg.Binance.ProxyUrl)
 	if err != nil {
 		o.log.Error("optimize: initialize Binance exchange", zap.Error(err))
@@ -55,7 +50,7 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 	timePeriodMultiplier := float64(60 * 60 / timeframeSec)
 	candlesPerDay := (24 * 60 * 60) / int(timeframeSec)
 
-	candlesTotal := (params.ObjTrainingSetDays + params.ObjValidationSetDays + params.ValidationSetDays) * candlesPerDay
+	candlesTotal := (params.ValSetDays + params.TrainSetDays) * candlesPerDay
 
 	candles, err := ex.FetchOHLCV(params.Symbol, params.Timeframe, candlesTotal)
 
@@ -66,21 +61,18 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 
 	o.log.Info("optimize: ohlcv data", zap.Int("length", len(candles)))
 
-	valCandlesCount := params.ValidationSetDays * candlesPerDay
-	objValCandlesCount := params.ObjValidationSetDays * candlesPerDay
-	objTrainCandlesCount := params.ObjTrainingSetDays * candlesPerDay
+	trainCandlesCount := params.TrainSetDays * candlesPerDay
+	valCandlesCount := params.ValSetDays * candlesPerDay
 
-	if (valCandlesCount + objValCandlesCount + objTrainCandlesCount) > len(candles) {
+	if (valCandlesCount + trainCandlesCount) > len(candles) {
 		return fmt.Errorf("summary sets is larger than the available data")
 	}
 
-	objTrainCandles := candles[:objTrainCandlesCount]
-	objValCandles := candles[objTrainCandlesCount : len(candles)-valCandlesCount]
-	valCandles := candles[len(candles)-valCandlesCount:]
+	trainCandles := candles[:trainCandlesCount]
+	valCandles := candles[trainCandlesCount:]
 
 	o.log.Info("optimize: datasets prepared",
-		zap.Int("obj_train_candles", len(objTrainCandles)),
-		zap.Int("obj_val_candles", len(objValCandles)),
+		zap.Int("train_candles", len(trainCandles)),
 		zap.Int("val_candles", len(valCandles)),
 	)
 
@@ -101,10 +93,9 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 		eg.Go(func() error {
 			return study.Optimize(o.objective(objectiveParams{
 				symbol:               params.Symbol,
-				trainCandles:         objTrainCandles,
-				validationCandles:    objValCandles,
+				candles:              trainCandles,
+				setDays:              params.TrainSetDays,
 				timePeriodMultiplier: timePeriodMultiplier,
-				validationSetDays:    params.ObjValidationSetDays,
 			}), params.Trials/params.Workers)
 		})
 	}
@@ -119,7 +110,7 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 		o.log.Error("optimize: get best params", zap.Error(err))
 		return err
 	}
-	combinedSharpeRatio, err := study.GetBestValue()
+	combinedSharpRatio, err := study.GetBestValue()
 	if err != nil {
 		o.log.Error("optimize: get best value", zap.Error(err))
 		return err
@@ -160,15 +151,15 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 	orderCount := len(valBTResult.Orders)
 
 	o.log.Info("optimization completed",
-		zap.Float64("combined_sharpe_ratio", combinedSharpeRatio),
+		zap.Float64("combined_sharpe_ratio", combinedSharpRatio),
 		zap.Float64("validation_sharpe_ratio", valBTResult.SharpeRatio),
 		zap.Float64("validation_max_drawdown", valBTResult.MaxDrawdown),
 		zap.Float64("validation_win_rate", valBTResult.WinRate),
 		zap.String("filename", filename))
 
 	result := fmt.Sprintf(
-		"Символ: %s\nКоличество trials: %d\nКоличество дней на валидации: %d\nTimeframe: %s\nКоличество свечей в сутках: %d\nКоличество сделок: %d\nКомбинированный Sharpe Ratio: %.2f\nВалидационный Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
-		params.Symbol, params.Trials, params.ValidationSetDays, params.Timeframe, candlesPerDay, orderCount, combinedSharpeRatio, valBTResult.SharpeRatio, valBTResult.FinalCapital, valBTResult.MaxDrawdown, valBTResult.WinRate, filename)
+		"Символ: %s\nTrials: %d\nTimeframe: %s\nКоличество дней на валидации: %d\nКоличество сделок: %d\nCombined Sharpe Ratio: %.2f\nValidation Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
+		params.Symbol, params.Trials, params.Timeframe, params.ValSetDays, orderCount, combinedSharpRatio, valBTResult.SharpeRatio, valBTResult.FinalCapital, valBTResult.MaxDrawdown, valBTResult.WinRate, filename)
 
 	buff := &bytes.Buffer{}
 	w := struct2csv.NewWriter(buff)
@@ -202,7 +193,7 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 	if err != nil {
 		o.log.Error("report: generate charts", zap.Error(err))
 	}
-	err = o.tg.SendFile(chartBuff, "html", "Отчет по симуляции")
+	err = o.tg.SendFile(chartBuff, "html", "Отчет по бектесту")
 	if err != nil {
 		o.log.Error("report: send to telegram", zap.Error(err))
 	}

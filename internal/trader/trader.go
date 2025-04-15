@@ -43,7 +43,6 @@ type Trader interface {
 	Run(mode TradeMode) error
 	BacktestAlgo(appliedOHLCV []models.AppliedOHLCV) (*Action, error)
 	GetState() State
-	ProcessAlgo(candle models.OHLCV) (*Action, error)
 }
 
 type State interface {

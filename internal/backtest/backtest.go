@@ -59,22 +59,22 @@ func (b *backtest) Run(ohlcv []models.OHLCV, mod *model.Model) (*BacktestResult,
 		InitialCapital: b.InitialCapital,
 	})
 
-	candles := str.ApplyIndicators(ohlcv, mod.StrategyParams)
-	if candles == nil {
+	appliedCandles := str.ApplyIndicators(ohlcv, mod.StrategyParams)
+	if appliedCandles == nil {
 		return nil, fmt.Errorf("no candles after strategy apply")
 	}
 
-	for _, c := range candles {
+	for _, c := range appliedCandles {
 		if c.ATR == 0 {
 			return nil, fmt.Errorf("ATR is required for backtest")
 		}
 	}
 
 	var valCandles []models.AppliedOHLCV
-	valCandles = append(valCandles, candles[0])
+	valCandles = append(valCandles, appliedCandles[0])
 
-	for i := 1; i < len(candles)-1; i++ {
-		valCandles = append(valCandles, candles[i])
+	for i := 0; i < len(appliedCandles); i++ {
+		valCandles = append(valCandles, appliedCandles[i])
 
 		_, _ = trade.BacktestAlgo(valCandles)
 	}

@@ -5,16 +5,14 @@ import (
 	"cb_grok/internal/strategy"
 	"cb_grok/pkg/models"
 	"github.com/c-bata/goptuna"
-	"github.com/ethereum/go-ethereum/log"
 	"go.uber.org/zap"
 )
 
 type objectiveParams struct {
 	symbol               string
-	trainCandles         []models.OHLCV
-	validationCandles    []models.OHLCV
+	candles              []models.OHLCV
+	setDays              int
 	timePeriodMultiplier float64
-	validationSetDays    int
 }
 
 func (o *optimize) objective(params objectiveParams) func(trial goptuna.Trial) (float64, error) {
@@ -151,7 +149,7 @@ func (o *optimize) objective(params objectiveParams) func(trial goptuna.Trial) (
 			StochasticWeight:    stochasticWeight,
 		}
 
-		trainBTResult, err := o.bt.Run(params.trainCandles, &model.Model{
+		trainBTResult, err := o.bt.Run(params.candles, &model.Model{
 			Symbol:         params.symbol,
 			StrategyParams: strategyParams,
 		})
@@ -159,24 +157,13 @@ func (o *optimize) objective(params objectiveParams) func(trial goptuna.Trial) (
 			return 0, err
 		}
 
-		valBTResult, err := o.bt.Run(params.validationCandles, &model.Model{
-			Symbol:         params.symbol,
-			StrategyParams: strategyParams,
-		})
-		if err != nil {
-			log.Warn("Failed to run backtest on validation set", zap.Error(err))
-			return trainBTResult.SharpeRatio, nil
-		}
-
-		combinedSharpe := valBTResult.SharpeRatio * (1 - valBTResult.MaxDrawdown/100) * min(float64(len(valBTResult.Orders))/(float64(params.validationSetDays*2)), 1)
+		combinedSharpe := trainBTResult.SharpeRatio * (1 - trainBTResult.MaxDrawdown/100) * min(float64(len(trainBTResult.Orders))/(float64(params.setDays*2)), 1)
 
 		o.log.Info("Trial result",
 			zap.Int("trial", trial.ID),
 			zap.Float64("combined_sharpe", combinedSharpe),
 			zap.Float64("train_max_dd", trainBTResult.MaxDrawdown),
 			zap.Float64("train_win_rate", trainBTResult.WinRate),
-			zap.Float64("val_max_dd", valBTResult.MaxDrawdown),
-			zap.Float64("val_win_rate", valBTResult.WinRate),
 		)
 
 		return combinedSharpe, nil
