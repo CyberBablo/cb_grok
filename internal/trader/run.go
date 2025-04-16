@@ -67,14 +67,14 @@ func (t *trader) Run(mode TradeMode) error {
 			tpv = action.PortfolioValue
 
 			if action.Decision != DecisionHold {
-				t.log.Info("trade algo event",
-					zap.Int64("timeframe", action.Timestamp),
-					zap.String("decision", string(action.Decision)),
-					zap.String("trigger", string(action.DecisionTrigger)),
-					zap.Float64("asset_amount", action.AssetAmount),
-					zap.String("asset_curr", action.AssetCurrency),
-					zap.Float64("portfolio_usdt", action.PortfolioValue),
-				)
+				//t.log.Info("trade algo event",
+				//	zap.Int64("timeframe", action.Timestamp),
+				//	zap.String("decision", string(action.Decision)),
+				//	zap.String("trigger", string(action.DecisionTrigger)),
+				//	zap.Float64("asset_amount", action.AssetAmount),
+				//	zap.String("asset_curr", action.AssetCurrency),
+				//	zap.Float64("portfolio_usdt", action.PortfolioValue),
+				//)
 			}
 		}
 	}
@@ -83,8 +83,8 @@ func (t *trader) Run(mode TradeMode) error {
 		t.log.Info("simulation results", zap.Int("num_orders", len(t.state.orders)), zap.Float64("tpv", tpv))
 
 		result := fmt.Sprintf(
-			"Результат симуляции\n\nСимвол: %s\nКоличество сделок: %d\nSharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f",
-			t.model.Symbol, len(t.state.GetOrders()), t.state.CalculateSharpeRatio(), t.state.GetPortfolioValue(), t.state.CalculateMaxDrawdown(), t.state.CalculateWinRate())
+			"Результат симуляции\n\nСимвол: %s\nКол-во свечей: %d\nКоличество сделок: %d\nSharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f",
+			t.model.Symbol, len(t.state.GetOHLCV()), len(t.state.GetOrders()), t.state.CalculateSharpeRatio(), t.state.GetPortfolioValue(), t.state.CalculateMaxDrawdown(), t.state.CalculateWinRate())
 
 		buff := &bytes.Buffer{}
 		w := struct2csv.NewWriter(buff)

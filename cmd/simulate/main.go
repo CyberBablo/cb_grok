@@ -90,8 +90,8 @@ func runServer(log *zap.Logger, symbol string, timeframe string, tradingDays int
 		defer conn.Close()
 
 		bar := progressbar.Default(int64(len(candles)), "candles")
-		for _, v := range candles {
-			d, err := json.Marshal(v)
+		for i := range candles {
+			d, err := json.Marshal(candles[i])
 			if err != nil {
 				continue
 			}

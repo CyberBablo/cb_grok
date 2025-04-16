@@ -54,6 +54,7 @@ type State interface {
 	CalculateMaxDrawdown() float64
 	CalculateSharpeRatio() float64
 	GetInitialCapital() float64
+	GetAppliedOHLCV() []models.AppliedOHLCV
 
 	GenerateCharts() (*bytes.Buffer, error)
 }

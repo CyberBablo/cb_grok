@@ -71,9 +71,8 @@ func (b *backtest) Run(ohlcv []models.OHLCV, mod *model.Model) (*BacktestResult,
 	}
 
 	var valCandles []models.AppliedOHLCV
-	valCandles = append(valCandles, appliedCandles[0])
 
-	for i := 1; i < len(appliedCandles); i++ {
+	for i := 0; i < len(appliedCandles); i++ {
 		valCandles = append(valCandles, appliedCandles[i])
 
 		_, _ = trade.BacktestAlgo(valCandles)

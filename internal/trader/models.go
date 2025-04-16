@@ -27,6 +27,7 @@ type state struct {
 	initialCapital float64
 
 	ohlcv           []models.OHLCV
+	appliedOHLCV    []models.AppliedOHLCV
 	orders          []Action
 	portfolioValues []PortfolioValue
 

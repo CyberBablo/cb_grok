@@ -24,12 +24,11 @@ func main() {
 		logger.Module,
 		config.Module,
 		telegram.Module,
-		trader.Module,
 		fx.Invoke(runTrade),
 	).Run()
 }
 
-func runTrade(trade trader.Trader, log *zap.Logger, tg *telegram.TelegramService) error {
+func runTrade(log *zap.Logger, tg *telegram.TelegramService) error {
 	var (
 		modelFilename string
 	)
@@ -43,6 +42,8 @@ func runTrade(trade trader.Trader, log *zap.Logger, tg *telegram.TelegramService
 	}
 
 	mockExch := exchange.NewMockExchange()
+
+	trade := trader.NewTrader(log, tg)
 
 	trade.Setup(trader.TraderParams{
 		Model:          mod,

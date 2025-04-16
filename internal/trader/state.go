@@ -13,6 +13,10 @@ func (s *state) GetOHLCV() []models.OHLCV {
 	return s.ohlcv
 }
 
+func (s *state) GetAppliedOHLCV() []models.AppliedOHLCV {
+	return s.appliedOHLCV
+}
+
 func (s *state) GetInitialCapital() float64 {
 	return s.initialCapital
 }

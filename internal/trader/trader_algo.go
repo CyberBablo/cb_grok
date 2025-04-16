@@ -33,16 +33,13 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 		return nil, nil
 	}
 
+	t.state.appliedOHLCV = appliedOHLCV
+
 	currentCandle := appliedOHLCV[len(appliedOHLCV)-1]
 
-	//var currentSignal int
-
-	//buyDelayCandles := 0
-	//for _, c := range appliedOHLCV[len(appliedOHLCV)-1-buyDelayCandles:] {
-	//	if c.Signal == 1 {
-	//		currentSignal = 1
-	//		break
-	//	}
+	//if len(appliedOHLCV) > 2870 {
+	//	b, _ := json.Marshal(currentCandle)
+	//	fmt.Printf("%s\n", string(b))
 	//}
 
 	currentSignal := currentCandle.Signal
