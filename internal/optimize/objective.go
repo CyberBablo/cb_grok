@@ -33,11 +33,11 @@ func (o *optimize) objective(params objectiveParams) func(trial goptuna.Trial) (
 		if err != nil {
 			return 0, err
 		}
-		buyRsiThreshold, err := trial.SuggestFloat("buy_rsi", 10, 40)
+		buyRsiThreshold, err := trial.SuggestFloat("buy_rsi_threshold", 10, 40)
 		if err != nil {
 			return 0, err
 		}
-		sellRsiThreshold, err := trial.SuggestFloat("sell_rsi", 60, 90)
+		sellRsiThreshold, err := trial.SuggestFloat("sell_rsi_threshold", 60, 90)
 		if err != nil {
 			return 0, err
 		}
