@@ -6,8 +6,8 @@ import (
 )
 
 func CalculateBollingerBands(candles []models.OHLCV, period int, stdDevMultiplier float64) ([]float64, []float64, []float64) {
-	if len(candles) < period {
-		return nil, nil, nil // Недостаточно данных
+	if len(candles) < period || period <= 0 || stdDevMultiplier < 0 {
+		return nil, nil, nil // Недостаточно данных или некорректные параметры
 	}
 
 	closes := make([]float64, len(candles))
@@ -16,35 +16,42 @@ func CalculateBollingerBands(candles []models.OHLCV, period int, stdDevMultiplie
 	}
 
 	// Рассчитываем SMA
-	middle := CalculateSMA(candles, period) // Используем существующую функцию CalculateSMA
+	middle := CalculateSMA(candles, period)
 	if middle == nil {
 		return nil, nil, nil
 	}
 
 	// Рассчитываем стандартное отклонение
 	stdDev := make([]float64, len(middle))
-	for i := range middle {
-		start := i
-		end := i + period
-		if end > len(closes) {
-			end = len(closes)
-		}
-		slice := closes[start:end]
-		var sumSquares float64
+	for i := period - 1; i < len(closes); i++ {
+		start := i - period + 1
+		slice := closes[start : i+1]
+		var sum, sumSquares float64
 		for _, price := range slice {
-			diff := price - middle[i]
-			sumSquares += diff * diff
+			sum += price
+			sumSquares += price * price
 		}
-		stdDev[i] = math.Sqrt(sumSquares / float64(len(slice)))
+		mean := sum / float64(len(slice))
+		variance := (sumSquares / float64(len(slice))) - (mean * mean)
+		if variance < 0 { // Избегаем отрицательной дисперсии из-за погрешностей float
+			variance = 0
+		}
+		stdDev[i] = math.Sqrt(variance)
 	}
 
 	// Рассчитываем верхнюю и нижнюю полосы
 	upper := make([]float64, len(middle))
 	lower := make([]float64, len(middle))
 	for i := range middle {
-		upper[i] = middle[i] + stdDevMultiplier*stdDev[i]
-		lower[i] = middle[i] - stdDevMultiplier*stdDev[i]
+		if i < period-1 {
+			upper[i] = math.NaN()
+			lower[i] = math.NaN()
+		} else {
+			upper[i] = middle[i] + stdDevMultiplier*stdDev[i]
+			lower[i] = middle[i] - stdDevMultiplier*stdDev[i]
+		}
 	}
 
 	return upper, middle, lower
+
 }

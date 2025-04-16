@@ -104,10 +104,15 @@ func (o *optimize) objective(params objectiveParams) func(trial goptuna.Trial) (
 		if err != nil {
 			return 0, err
 		}
+
 		bbWeight, err := trial.SuggestFloat("bb_weight", 0, 1)
 		if err != nil {
 			return 0, err
 		}
+
+		//bollingerPeriod := int(0)
+		//bollingerStdDev := float64(0)
+		//bbWeight := 0.0
 
 		stochasticKPeriod, err := trial.SuggestStepInt("stochastic_k_period", 5, 20*int(params.timePeriodMultiplier), int(params.timePeriodMultiplier))
 		if err != nil {
@@ -164,6 +169,8 @@ func (o *optimize) objective(params objectiveParams) func(trial goptuna.Trial) (
 			zap.Float64("combined_sharpe", combinedSharpe),
 			zap.Float64("train_max_dd", trainBTResult.MaxDrawdown),
 			zap.Float64("train_win_rate", trainBTResult.WinRate),
+			zap.Int("Orders", len(trainBTResult.Orders)),
+			zap.Float64("Final capital", trainBTResult.FinalCapital),
 		)
 
 		return combinedSharpe, nil
