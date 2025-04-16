@@ -38,10 +38,10 @@ func mapToPriceRange(values []float64, priceMin, priceMax float64) []float64 {
 	indMin, indMax := values[0], values[0]
 	for _, v := range values {
 		if !math.IsNaN(v) && !math.IsInf(v, 0) {
-			if v < indMin {
+			if v < indMin || math.IsNaN(indMin) {
 				indMin = v
 			}
-			if v > indMax {
+			if v > indMax || math.IsNaN(indMax) {
 				indMax = v
 			}
 		}
@@ -215,18 +215,18 @@ func (s *state) klineChart() *charts.Kline {
 
 	// Update LineData with mapped values
 	for i := range appliedOHLCV {
-		atr[i] = opts.LineData{Value: atrMapped[i]}
-		rsi[i] = opts.LineData{Value: rsiMapped[i]}
-		shortMA[i] = opts.LineData{Value: shortMAMapped[i]}
-		longMA[i] = opts.LineData{Value: longMAMapped[i]}
-		shortEMA[i] = opts.LineData{Value: shortEMAMapped[i]}
-		longEMA[i] = opts.LineData{Value: longEMAMapped[i]}
-		adx[i] = opts.LineData{Value: adxMapped[i]}
-		macd[i] = opts.LineData{Value: macdMapped[i]}
-		upperBB[i] = opts.LineData{Value: upperBBMapped[i]}
-		lowerBB[i] = opts.LineData{Value: lowerBBMapped[i]}
-		stochasticK[i] = opts.LineData{Value: stochasticKMapped[i]}
-		stochasticD[i] = opts.LineData{Value: stochasticDMapped[i]}
+		atr[i] = opts.LineData{Value: lo.If(math.IsNaN(atrMapped[i]), interface{}(nil)).Else(atrMapped[i])}
+		rsi[i] = opts.LineData{Value: lo.If(math.IsNaN(rsiMapped[i]), interface{}(nil)).Else(rsiMapped[i])}
+		shortMA[i] = opts.LineData{Value: lo.If(math.IsNaN(shortMAMapped[i]), interface{}(nil)).Else(shortMAMapped[i])}
+		longMA[i] = opts.LineData{Value: lo.If(math.IsNaN(longMAMapped[i]), interface{}(nil)).Else(longMAMapped[i])}
+		shortEMA[i] = opts.LineData{Value: lo.If(math.IsNaN(shortEMAMapped[i]), interface{}(nil)).Else(shortEMAMapped[i])}
+		longEMA[i] = opts.LineData{Value: lo.If(math.IsNaN(longEMAMapped[i]), interface{}(nil)).Else(longEMAMapped[i])}
+		adx[i] = opts.LineData{Value: lo.If(math.IsNaN(adxMapped[i]), interface{}(nil)).Else(adxMapped[i])}
+		macd[i] = opts.LineData{Value: lo.If(math.IsNaN(macdMapped[i]), interface{}(nil)).Else(macdMapped[i])}
+		upperBB[i] = opts.LineData{Value: lo.If(math.IsNaN(upperBBMapped[i]), interface{}(nil)).Else(upperBBMapped[i])}
+		lowerBB[i] = opts.LineData{Value: lo.If(math.IsNaN(lowerBBMapped[i]), interface{}(nil)).Else(lowerBBMapped[i])}
+		stochasticK[i] = opts.LineData{Value: lo.If(math.IsNaN(stochasticKMapped[i]), interface{}(nil)).Else(stochasticKMapped[i])}
+		stochasticD[i] = opts.LineData{Value: lo.If(math.IsNaN(stochasticDMapped[i]), interface{}(nil)).Else(stochasticDMapped[i])}
 	}
 
 	// Add indicator series
@@ -235,7 +235,7 @@ func (s *state) klineChart() *charts.Kline {
 		data []opts.LineData
 	}{
 		{"ATR", atr},
-		//{"RSI", rsi},
+		{"RSI", rsi},
 		{"ShortMA", shortMA},
 		{"LongMA", longMA},
 		{"ShortEMA", shortEMA},
