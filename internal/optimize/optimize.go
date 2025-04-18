@@ -79,7 +79,7 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 	study, err := goptuna.CreateStudy(
 		"strategy_1",
 		goptuna.StudyOptionDirection(goptuna.StudyDirectionMaximize),
-		goptuna.StudyOptionSampler(tpe.NewSampler()),
+		goptuna.StudyOptionSampler(tpe.NewSampler(tpe.SamplerOptionNumberOfStartupTrials(50))),
 	)
 	if err != nil {
 		o.log.Error("optimize: create study", zap.Error(err))

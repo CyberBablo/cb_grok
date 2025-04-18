@@ -110,10 +110,6 @@ func (o *optimize) objective(params objectiveParams) func(trial goptuna.Trial) (
 			return 0, err
 		}
 
-		//bollingerPeriod := int(0)
-		//bollingerStdDev := float64(0)
-		//bbWeight := 0.0
-
 		stochasticKPeriod, err := trial.SuggestStepInt("stochastic_k_period", 5, 20*int(params.timePeriodMultiplier), int(params.timePeriodMultiplier))
 		if err != nil {
 			return 0, err
@@ -123,6 +119,27 @@ func (o *optimize) objective(params objectiveParams) func(trial goptuna.Trial) (
 			return 0, err
 		}
 		stochasticWeight, err := trial.SuggestFloat("stochastic_weight", 0, 1)
+		if err != nil {
+			return 0, err
+		}
+
+		obvWeight, err := trial.SuggestFloat("obv_weight", 0, 1)
+		if err != nil {
+			return 0, err
+		}
+		vwapPeriod, err := trial.SuggestStepInt("vwap_period", 5, 50*int(params.timePeriodMultiplier), int(params.timePeriodMultiplier))
+		if err != nil {
+			return 0, err
+		}
+		vwapWeight, err := trial.SuggestFloat("vwap_weight", 0, 1)
+		if err != nil {
+			return 0, err
+		}
+		cciPeriod, err := trial.SuggestStepInt("cci_period", 10, 50*int(params.timePeriodMultiplier), int(params.timePeriodMultiplier))
+		if err != nil {
+			return 0, err
+		}
+		cciWeight, err := trial.SuggestFloat("cci_weight", 0, 1)
 		if err != nil {
 			return 0, err
 		}
@@ -152,6 +169,11 @@ func (o *optimize) objective(params objectiveParams) func(trial goptuna.Trial) (
 			StochasticDPeriod:   stochasticDPeriod,
 			StochasticKPeriod:   stochasticKPeriod,
 			StochasticWeight:    stochasticWeight,
+			OBVWeight:           obvWeight,
+			VWAPPeriod:          vwapPeriod,
+			VWAPWeight:          vwapWeight,
+			CCIPeriod:           cciPeriod,
+			CCIWeight:           cciWeight,
 		}
 
 		trainBTResult, err := o.bt.Run(params.candles, &model.Model{
@@ -161,8 +183,9 @@ func (o *optimize) objective(params objectiveParams) func(trial goptuna.Trial) (
 		if err != nil {
 			return 0, err
 		}
+		//combinedSharpe := trainBTResult.SharpeRatio * min(float64(len(trainBTResult.Orders))/(float64(params.setDays*2)), 1) * (1 - trainBTResult.WinRate/100)
 
-		combinedSharpe := trainBTResult.SharpeRatio * (1 - trainBTResult.MaxDrawdown/100) * min(float64(len(trainBTResult.Orders))/(float64(params.setDays*2)), 1)
+		combinedSharpe := trainBTResult.SharpeRatio * (1 - trainBTResult.MaxDrawdown/100) * trainBTResult.WinRate / 100 * min(float64(len(trainBTResult.Orders))/(float64(params.setDays*2)), 1)
 
 		o.log.Info("Trial result",
 			zap.Int("trial", trial.ID),
@@ -171,6 +194,10 @@ func (o *optimize) objective(params objectiveParams) func(trial goptuna.Trial) (
 			zap.Float64("train_win_rate", trainBTResult.WinRate),
 			zap.Int("Orders", len(trainBTResult.Orders)),
 			zap.Float64("Final capital", trainBTResult.FinalCapital),
+			zap.Float64("v1", trainBTResult.SharpeRatio),
+			zap.Float64("v2", 1-trainBTResult.MaxDrawdown/100),
+			zap.Float64("v3", trainBTResult.WinRate/100),
+			zap.Float64("v4", min(float64(len(trainBTResult.Orders))/(float64(params.setDays*2)), 1)),
 		)
 
 		return combinedSharpe, nil

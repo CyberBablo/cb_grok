@@ -30,6 +30,9 @@ func (s *LinearBiasStrategy) ApplyIndicators(candles []models.OHLCV, params Stra
 	macd, macdSignal := indicators.CalculateMACD(candles, params.MACDShortPeriod, params.MACDLongPeriod, params.MACDSignalPeriod)
 	upperBB, _, lowerBB := indicators.CalculateBollingerBands(candles, params.BollingerPeriod, params.BollingerStdDev)
 	stochasticK, stochasticD := indicators.CalculateStochasticOscillator(candles, params.StochasticKPeriod, params.StochasticDPeriod)
+	obv := indicators.CalculateOBV(candles)                      // Новый индикатор
+	vwap := indicators.CalculateVWAP(candles, params.VWAPPeriod) // Новый индикатор
+	cci := indicators.CalculateCCI(candles, params.CCIPeriod)    // Новый индикатор
 
 	trend := make([]bool, len(candles))
 	volatility := make([]bool, len(candles))
@@ -56,6 +59,9 @@ func (s *LinearBiasStrategy) ApplyIndicators(candles []models.OHLCV, params Stra
 			LowerBB:     lowerBB[i],
 			StochasticK: stochasticK[i],
 			StochasticD: stochasticD[i],
+			OBV:         obv[i],
+			VWAP:        vwap[i],
+			CCI:         cci[i],
 		})
 	}
 
@@ -67,7 +73,7 @@ func (s *LinearBiasStrategy) ApplySignals(candles []models.AppliedOHLCV, params 
 
 	for i := 1; i < len(candles); i++ {
 		// Добавлено поле StochasticSignal в инициализацию структуры Signals
-		signals := Signals{EMASignal: 0, RSISignal: 0, MACDSignal: 0, TrendSignal: 0, BBSignal: 0, StochasticSignal: 0}
+		signals := Signals{EMASignal: 0, RSISignal: 0, MACDSignal: 0, TrendSignal: 0, BBSignal: 0, StochasticSignal: 0, OBVSignal: 0, VWAPSignal: 0, CCISignal: 0}
 
 		if candles[i-1].ShortMA > candles[i-1].LongMA {
 			signals.EMASignal = 1
@@ -105,8 +111,30 @@ func (s *LinearBiasStrategy) ApplySignals(candles []models.AppliedOHLCV, params 
 			signals.StochasticSignal = -1 // Продажа при пересечении сверху вниз в зоне перекупленности
 		}
 
-		// Обновлен расчет общего веса с учетом StochasticWeight
-		totalWeight := params.RSIWeight + params.MACDWeight + params.TrendWeight + params.EMAWeight + params.BBWeight + params.StochasticWeight
+		if i > 1 {
+			// Логика для OBV
+			if candles[i-1].OBV > candles[i-2].OBV {
+				signals.OBVSignal = 1
+			} else if candles[i-1].OBV < candles[i-2].OBV {
+				signals.OBVSignal = -1
+			}
+		}
+		// Логика для VWAP
+		if candles[i-1].Close > candles[i-1].VWAP {
+			signals.VWAPSignal = 1
+		} else if candles[i-1].Close < candles[i-1].VWAP {
+			signals.VWAPSignal = -1
+		}
+
+		// Логика для CCI
+		if candles[i-1].CCI < -100 {
+			signals.CCISignal = 1
+		} else if candles[i-1].CCI > 100 {
+			signals.CCISignal = -1
+		}
+
+		// Обновлен расчет общего веса с учетом новых весов
+		totalWeight := params.RSIWeight + params.MACDWeight + params.TrendWeight + params.EMAWeight + params.BBWeight + params.StochasticWeight + params.OBVWeight + params.VWAPWeight + params.CCIWeight
 		if totalWeight == 0 {
 			totalWeight = 1
 		}
@@ -116,14 +144,19 @@ func (s *LinearBiasStrategy) ApplySignals(candles []models.AppliedOHLCV, params 
 		params.EMAWeight = params.EMAWeight / totalWeight
 		params.BBWeight = params.BBWeight / totalWeight
 		params.StochasticWeight = params.StochasticWeight / totalWeight
+		params.OBVWeight = params.OBVWeight / totalWeight
+		params.VWAPWeight = params.VWAPWeight / totalWeight
+		params.CCIWeight = params.CCIWeight / totalWeight
 
-		// Добавлен вклад StochasticSignal в итоговый сигнал
 		signal := float64(signals.RSISignal)*params.RSIWeight +
 			float64(signals.MACDSignal)*params.MACDWeight +
 			float64(signals.TrendSignal)*params.TrendWeight +
 			float64(signals.EMASignal)*params.EMAWeight +
 			float64(signals.BBSignal)*params.BBWeight +
-			float64(signals.StochasticSignal)*params.StochasticWeight
+			float64(signals.StochasticSignal)*params.StochasticWeight +
+			float64(signals.OBVSignal)*params.OBVWeight + // Новый вклад
+			float64(signals.VWAPSignal)*params.VWAPWeight + // Новый вклад
+			float64(signals.CCISignal)*params.CCIWeight // Новый вклад
 
 		signal = math.Tanh(signal)
 

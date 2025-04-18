@@ -5,7 +5,7 @@ type RunOptimizeParams struct {
 	Timeframe    string
 	TrainSetDays int
 	ValSetDays   int
-
-	Trials  int
-	Workers int
+	Trials       int
+	Workers      int
+	WfoPeriods   int
 }

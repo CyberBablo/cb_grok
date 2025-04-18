@@ -22,9 +22,14 @@ type StrategyParams struct {
 	BollingerPeriod     int     `json:"bollinger_period"`
 	BollingerStdDev     float64 `json:"bollinger_std_dev"`
 	BBWeight            float64 `json:"bb_weight"`
-	StochasticKPeriod   int     `json:"stochastic_k_period"` // Период для %K
-	StochasticDPeriod   int     `json:"stochastic_d_period"` // Период для %D
-	StochasticWeight    float64 `json:"stochastic_weight"`   // Вес для сигнала
+	StochasticKPeriod   int     `json:"stochastic_k_period"`
+	StochasticDPeriod   int     `json:"stochastic_d_period"`
+	StochasticWeight    float64 `json:"stochastic_weight"`
+	OBVWeight           float64 `json:"obv_weight"`  // Новый параметр
+	VWAPPeriod          int     `json:"vwap_period"` // Новый параметр
+	VWAPWeight          float64 `json:"vwap_weight"` // Новый параметр
+	CCIPeriod           int     `json:"cci_period"`  // Новый параметр
+	CCIWeight           float64 `json:"cci_weight"`  // Новый параметр
 }
 
 type Signals struct {
@@ -33,5 +38,8 @@ type Signals struct {
 	MACDSignal       int
 	TrendSignal      int
 	BBSignal         int
-	StochasticSignal int // Сигнал от Stochastic
+	StochasticSignal int
+	OBVSignal        int // Новый сигнал
+	VWAPSignal       int // Новый сигнал
+	CCISignal        int // Новый сигнал
 }

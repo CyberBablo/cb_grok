@@ -62,7 +62,7 @@ func runBacktest(backtest backtest.Backtest, cfg config.Config, log *zap.Logger,
 	candlesTotal := setDays * candlesPerDay
 
 	candles, err := ex.FetchOHLCV(mod.Symbol, timeframe, candlesTotal)
-
+	fmt.Printf("%+v\n", mod.StrategyParams)
 	result, err := backtest.Run(candles, mod)
 	if err != nil {
 		return err

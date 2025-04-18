@@ -22,9 +22,32 @@ type AppliedOHLCV struct {
 	ADX         float64
 	MACD        float64
 	MACDSignal  float64
-	Signal      int
 	UpperBB     float64
 	LowerBB     float64
-	StochasticK float64 // Значение %K
-	StochasticD float64 // Значение %D
+	StochasticK float64
+	StochasticD float64
+	OBV         float64 // Новое поле
+	VWAP        float64 // Новое поле
+	CCI         float64 // Новое поле
+	Signal      int
 }
+
+//type AppliedOHLCV struct {
+//	OHLCV
+//	ATR         float64
+//	RSI         float64
+//	ShortMA     float64
+//	LongMA      float64
+//	ShortEMA    float64
+//	LongEMA     float64
+//	Trend       bool
+//	Volatility  bool
+//	ADX         float64
+//	MACD        float64
+//	MACDSignal  float64
+//	Signal      int
+//	UpperBB     float64
+//	LowerBB     float64
+//	StochasticK float64 // Значение %K
+//	StochasticD float64 // Значение %D
+//}
