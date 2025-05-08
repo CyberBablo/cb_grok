@@ -13,7 +13,6 @@ func NewLinearBiasStrategy() Strategy {
 }
 
 func (s *LinearBiasStrategy) ApplyIndicators(candles []models.OHLCV, params StrategyParams) []models.AppliedOHLCV {
-	// Обновлено условие: добавлен StochasticKPeriod для проверки минимальной длины данных
 	if len(candles) < max(params.MALongPeriod, params.EMALongPeriod, params.MACDLongPeriod, params.BollingerPeriod, params.StochasticKPeriod) {
 		return nil
 	}
@@ -63,73 +62,103 @@ func (s *LinearBiasStrategy) ApplyIndicators(candles []models.OHLCV, params Stra
 }
 
 func (s *LinearBiasStrategy) ApplySignals(candles []models.AppliedOHLCV, params StrategyParams) []models.AppliedOHLCV {
-	// Обновлено условие: добавлен StochasticKPeriod для проверки минимальной длины данных
+	if len(candles) < 2 {
+		return candles
+	}
 
+	// Сделаем вычисление сигналов более чувствительным для генерации большего количества торговых сигналов
 	for i := 1; i < len(candles); i++ {
-		// Добавлено поле StochasticSignal в инициализацию структуры Signals
 		signals := Signals{EMASignal: 0, RSISignal: 0, MACDSignal: 0, TrendSignal: 0, BBSignal: 0, StochasticSignal: 0}
 
-		if candles[i-1].ShortMA > candles[i-1].LongMA {
-			signals.EMASignal = 1
-		} else if candles[i-1].ShortMA < candles[i-1].LongMA {
-			signals.EMASignal = -1
+		// Увеличиваем чувствительность пересечения MA
+		if candles[i-1].ShortMA <= candles[i-1].LongMA && candles[i].ShortMA > candles[i].LongMA {
+			signals.EMASignal = 2 // Усиливаем сигнал пересечения снизу вверх
+		} else if candles[i-1].ShortMA >= candles[i-1].LongMA && candles[i].ShortMA < candles[i].LongMA {
+			signals.EMASignal = -2 // Усиливаем сигнал пересечения сверху вниз
+		} else if candles[i].ShortMA > candles[i].LongMA {
+			signals.EMASignal = 1 // Положительный тренд
+		} else if candles[i].ShortMA < candles[i].LongMA {
+			signals.EMASignal = -1 // Отрицательный тренд
 		}
-		if candles[i-1].MACD > candles[i-1].MACDSignal {
+
+		// Более чувствительное пересечение MACD
+		if candles[i-1].MACD <= candles[i-1].MACDSignal && candles[i].MACD > candles[i].MACDSignal {
+			signals.MACDSignal = 2 // Усиливаем сигнал пересечения MACD снизу вверх
+		} else if candles[i-1].MACD >= candles[i-1].MACDSignal && candles[i].MACD < candles[i].MACDSignal {
+			signals.MACDSignal = -2 // Усиливаем сигнал пересечения MACD сверху вниз
+		} else if candles[i].MACD > candles[i].MACDSignal {
 			signals.MACDSignal = 1
-		} else if candles[i-1].MACD < candles[i-1].MACDSignal {
+		} else if candles[i].MACD < candles[i].MACDSignal {
 			signals.MACDSignal = -1
 		}
 
-		if candles[i-1].Trend && candles[i-1].Volatility {
+		// Упрощаем распознавание тренда - если есть волатильность, используем направление тренда
+		if candles[i].Trend && candles[i].Volatility {
 			signals.TrendSignal = 1
-		} else if !candles[i-1].Trend && candles[i-1].Volatility {
+		} else if !candles[i].Trend && candles[i].Volatility {
 			signals.TrendSignal = -1
 		}
 
-		if candles[i-1].RSI < params.BuyRSIThreshold {
+		// Более отзывчивые уровни RSI
+		if candles[i].RSI < params.BuyRSIThreshold+5 { // +5 для увеличения чувствительности
 			signals.RSISignal = 1
-		} else if candles[i-1].RSI > params.SellRSIThreshold {
+		} else if candles[i].RSI > params.SellRSIThreshold-5 { // -5 для увеличения чувствительности
 			signals.RSISignal = -1
 		}
 
-		if candles[i-1].Close < candles[i-1].LowerBB {
+		// Более чувствительные уровни Bollinger Bands
+		if candles[i].Close < candles[i].LowerBB*1.01 { // Чуть менее строгое условие
 			signals.BBSignal = 1
-		} else if candles[i-1].Close > candles[i-1].UpperBB {
+		} else if candles[i].Close > candles[i].UpperBB*0.99 { // Чуть менее строгое условие
 			signals.BBSignal = -1
 		}
 
-		// Добавлена логика сигналов для Stochastic Oscillator
-		if candles[i-1].StochasticK < 20 && candles[i-1].StochasticK > candles[i-1].StochasticD {
-			signals.StochasticSignal = 1 // Покупка при пересечении снизу вверх в зоне перепроданности
-		} else if candles[i-1].StochasticK > 80 && candles[i-1].StochasticK < candles[i-1].StochasticD {
-			signals.StochasticSignal = -1 // Продажа при пересечении сверху вниз в зоне перекупленности
+		// Улучшенные сигналы для Stochastic Oscillator
+		if candles[i].StochasticK < 25 && candles[i].StochasticK > candles[i].StochasticD {
+			signals.StochasticSignal = 1 // Покупка при пересечении в зоне перепроданности
+		} else if candles[i].StochasticK > 75 && candles[i].StochasticK < candles[i].StochasticD {
+			signals.StochasticSignal = -1 // Продажа при пересечении в зоне перекупленности
 		}
 
-		// Обновлен расчет общего веса с учетом StochasticWeight
+		// Правильное нормирование весов
 		totalWeight := params.RSIWeight + params.MACDWeight + params.TrendWeight + params.EMAWeight + params.BBWeight + params.StochasticWeight
 		if totalWeight == 0 {
 			totalWeight = 1
 		}
-		params.RSIWeight = params.RSIWeight / totalWeight
-		params.TrendWeight = params.TrendWeight / totalWeight
-		params.MACDWeight = params.MACDWeight / totalWeight
-		params.EMAWeight = params.EMAWeight / totalWeight
-		params.BBWeight = params.BBWeight / totalWeight
-		params.StochasticWeight = params.StochasticWeight / totalWeight
 
-		// Добавлен вклад StochasticSignal в итоговый сигнал
-		signal := float64(signals.RSISignal)*params.RSIWeight +
-			float64(signals.MACDSignal)*params.MACDWeight +
-			float64(signals.TrendSignal)*params.TrendWeight +
-			float64(signals.EMASignal)*params.EMAWeight +
-			float64(signals.BBSignal)*params.BBWeight +
-			float64(signals.StochasticSignal)*params.StochasticWeight
+		rsiWeight := params.RSIWeight / totalWeight
+		trendWeight := params.TrendWeight / totalWeight
+		macdWeight := params.MACDWeight / totalWeight
+		emaWeight := params.EMAWeight / totalWeight
+		bbWeight := params.BBWeight / totalWeight
+		stochasticWeight := params.StochasticWeight / totalWeight
 
+		// Дополнительное усиление сигналов в определенных условиях
+		// Если RSI в экстремальной зоне, усиливаем его влияние
+		if candles[i].RSI < 30 || candles[i].RSI > 70 {
+			rsiWeight *= 1.5
+		}
+
+		// Если цена пробила Bollinger Band, это сильный сигнал
+		if signals.BBSignal != 0 {
+			bbWeight *= 1.5
+		}
+
+		// Рассчитываем итоговый сигнал с учетом скорректированных весов
+		signal := float64(signals.RSISignal)*rsiWeight +
+			float64(signals.MACDSignal)*macdWeight +
+			float64(signals.TrendSignal)*trendWeight +
+			float64(signals.EMASignal)*emaWeight +
+			float64(signals.BBSignal)*bbWeight +
+			float64(signals.StochasticSignal)*stochasticWeight
+
+		// Применяем функцию tanh для нормализации сигнала в диапазоне [-1, 1]
 		signal = math.Tanh(signal)
 
-		if signal > params.BuySignalThreshold {
+		// Более чувствительные пороги для открытия позиций
+		if signal > params.BuySignalThreshold*0.85 { // Снижаем порог сигнала для покупки
 			candles[i].Signal = 1
-		} else if signal < params.SellSignalThreshold {
+		} else if signal < params.SellSignalThreshold*0.85 { // Снижаем порог сигнала для продажи
 			candles[i].Signal = -1
 		} else {
 			candles[i].Signal = 0

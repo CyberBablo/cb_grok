@@ -33,8 +33,8 @@ var (
 		Commission:           0.001,  // 0.1%
 		SlippagePercent:      0.001,  // 0.1%
 		Spread:               0.0002, // 0.02%
-		StopLossMultiplier:   5,
-		TakeProfitMultiplier: 5,
+		StopLossMultiplier:   10,
+		TakeProfitMultiplier: 10,
 	}
 )
 

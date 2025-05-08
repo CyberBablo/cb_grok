@@ -13,6 +13,8 @@ func TimeframeToMilliseconds(tf string) int64 {
 		return 60 * 1000
 	case "15m":
 		return 900 * 1000
+	case "5m":
+		return 300 * 1000
 	case "30m":
 		return 1800 * 1000
 	case "1h":

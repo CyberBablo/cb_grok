@@ -162,8 +162,10 @@ func (o *optimize) objective(params objectiveParams) func(trial goptuna.Trial) (
 			return 0, err
 		}
 
-		combinedSharpe := trainBTResult.SharpeRatio * (1 - trainBTResult.MaxDrawdown/100) * min(float64(len(trainBTResult.Orders))/(float64(params.setDays*2)), 1)
-
+		combinedSharpe := trainBTResult.SharpeRatio *
+			(1 - trainBTResult.MaxDrawdown/150) * // Снизить штраф за просадку
+			min(float64(len(trainBTResult.Orders))/(float64(params.setDays)*1.5), 1) * // Поощрять больше сделок
+			(trainBTResult.WinRate / 100.0) // Учитывать win rate
 		o.log.Info("Trial result",
 			zap.Int("trial", trial.ID),
 			zap.Float64("combined_sharpe", combinedSharpe),
