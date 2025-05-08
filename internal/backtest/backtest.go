@@ -34,7 +34,7 @@ func NewBacktest(log *zap.Logger, tg *telegram.TelegramService) Backtest {
 		SlippagePercent:      0.001,  // 0.1%
 		Spread:               0.0002, // 0.02%
 		StopLossMultiplier:   5,
-		TakeProfitMultiplier: 5,
+		TakeProfitMultiplier: 30,
 
 		tg:  tg,
 		log: log,
