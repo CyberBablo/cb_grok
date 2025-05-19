@@ -7,10 +7,8 @@ require (
 	github.com/ccxt/ccxt/go/v4 v4.4.73
 	github.com/cinar/indicator v1.3.0
 	github.com/dnlo/struct2csv v0.0.0-20190928115744-2f584471b24e
-	github.com/ethereum/go-ethereum v1.15.7
 	github.com/go-echarts/go-echarts/v2 v2.5.3
 	github.com/gorilla/websocket v1.5.3
-	github.com/iamjinlei/go-tachart v0.0.0-20210729041122-12052a3368c8
 	github.com/samber/lo v1.49.1
 	github.com/schollz/progressbar/v3 v3.18.0
 	github.com/tucnak/telebot v2.0.0+incompatible
@@ -28,10 +26,10 @@ require (
 	github.com/crate-crypto/go-kzg-4844 v1.1.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
 	github.com/ethereum/c-kzg-4844 v1.0.0 // indirect
+	github.com/ethereum/go-ethereum v1.15.7 // indirect
 	github.com/ethereum/go-verkle v0.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/holiman/uint256 v1.3.2 // indirect
-	github.com/iamjinlei/go-tart v0.0.0-20210623083942-ceb57e98706b // indirect
 	github.com/iancoleman/strcase v0.3.0 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/mitchellh/hashstructure v1.1.0 // indirect
