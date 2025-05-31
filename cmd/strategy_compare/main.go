@@ -204,8 +204,6 @@ func runCompare(
 				ctx,
 				acc.ID,
 				bestStrategy.ID,
-				bestStrategy.Symbol,
-				bestStrategy.Timeframe,
 			)
 
 			if err != nil {
@@ -231,8 +229,6 @@ func runCompare(
 		accID, err := strategyRepo.CreateStrategyAcc(
 			ctx,
 			bestStrategy.ID,
-			bestStrategy.Symbol,
-			bestStrategy.Timeframe,
 		)
 		if err != nil {
 			log.Error("Failed to create strategy_acc record", zap.Error(err))

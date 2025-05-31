@@ -36,8 +36,8 @@ type StrategyRepository interface {
 		dt_create_left *time.Time,
 		dt_create_right *time.Time,
 	) ([]StrategyAcc, error)
-	CreateStrategyAcc(ctx context.Context, strategyID int64, symbol string, timeframe string) (int64, error)
-	UpdateStrategyAcc(ctx context.Context, id int64, strategyID int64, symbol string, timeframe string) error
+	CreateStrategyAcc(ctx context.Context, strategyID int64) (int64, error)
+	UpdateStrategyAcc(ctx context.Context, id int64, strategyID int64) error
 	DeleteStrategyAcc(ctx context.Context, id int64) error
 }
 
@@ -236,19 +236,26 @@ func (r *strategyRepository) FetchStrategyAcc(
 }
 
 // CreateStrategyAcc adds a new record to the strategy_acc table
-func (r *strategyRepository) CreateStrategyAcc(ctx context.Context, strategyID int64, symbol string, timeframe string) (int64, error) {
+func (r *strategyRepository) CreateStrategyAcc(ctx context.Context, strategyID int64) (int64, error) {
 	var id int64
 	err := r.db.QueryRowContext(ctx, `
+		with cte as (
+			select
+				s.symbol,
+				s.timeframe
+			from strategy s
+			where true
+				and s.id = $1
+			limit 1
+		)
 		INSERT INTO strategy_acc (strategy_id, symbol, timeframe, dt_upd, dt_create)
-		VALUES ($1, $2, $3, now(), now())
+		VALUES ($1, (select symbol from cte), (select timeframe from cte), now(), now())
 		RETURNING id
-	`, strategyID, symbol, timeframe).Scan(&id)
+	`, strategyID).Scan(&id)
 
 	if err != nil {
 		r.log.Error("failed to create strategy_acc",
 			zap.Int64("strategyID", strategyID),
-			zap.String("symbol", symbol),
-			zap.String("timeframe", timeframe),
 			zap.Error(err))
 		return 0, err
 	}
@@ -256,12 +263,25 @@ func (r *strategyRepository) CreateStrategyAcc(ctx context.Context, strategyID i
 }
 
 // UpdateStrategyAcc updates a strategy_acc record
-func (r *strategyRepository) UpdateStrategyAcc(ctx context.Context, id int64, strategyID int64, symbol string, timeframe string) error {
+func (r *strategyRepository) UpdateStrategyAcc(ctx context.Context, id int64, strategyID int64) error {
 	_, err := r.db.ExecContext(ctx, `
+		with cte as (
+			select
+				s.symbol,
+				s.timeframe
+			from strategy s
+			where true
+				and s.id = $1
+			limit 1
+		)
 		UPDATE strategy_acc
-		SET strategy_id = $1, symbol = $2, timeframe = $3, dt_upd = now()
-		WHERE id = $4
-	`, strategyID, symbol, timeframe, id)
+		SET
+			strategy_id = $1,
+			symbol = (select symbol from cte),
+			timeframe = (select timeframe from cte),
+			dt_upd = now()
+		WHERE id = $2
+	`, strategyID, id)
 
 	if err != nil {
 		r.log.Error("failed to update strategy_acc",

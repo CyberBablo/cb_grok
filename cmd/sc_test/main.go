@@ -221,7 +221,7 @@ func generateTestData(
 
 		if bestID != 0 {
 			// Create a strategy_acc record for the best strategy
-			accID, err := strategyRepo.CreateStrategyAcc(ctx, bestID, symbol, bestTimeframe)
+			accID, err := strategyRepo.CreateStrategyAcc(ctx, bestID)
 			if err != nil {
 				log.Error("Failed to create strategy_acc",
 					zap.String("symbol", symbol),
