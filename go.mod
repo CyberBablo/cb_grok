@@ -9,6 +9,8 @@ require (
 	github.com/dnlo/struct2csv v0.0.0-20190928115744-2f584471b24e
 	github.com/go-echarts/go-echarts/v2 v2.5.3
 	github.com/gorilla/websocket v1.5.3
+	github.com/jackc/pgx/v5 v5.7.5
+	github.com/jmoiron/sqlx v1.4.0
 	github.com/samber/lo v1.49.1
 	github.com/schollz/progressbar/v3 v3.18.0
 	github.com/tucnak/telebot v2.0.0+incompatible
@@ -33,10 +35,7 @@ require (
 	github.com/iancoleman/strcase v0.3.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
-	github.com/jackc/pgx v3.6.2+incompatible // indirect
-	github.com/jackc/pgx/v5 v5.7.5 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
-	github.com/jmoiron/sqlx v1.4.0 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/mitchellh/hashstructure v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
