@@ -13,3 +13,6 @@ CREATE TABLE IF NOT EXISTS strategy(
     to_dt bigint not null default (EXTRACT(EPOCH FROM now())::BIGINT),
     dt timestamp without time zone not null default now()
 );
+
+CREATE INDEX idx__strategy on strategy(symbol, timeframe, dt);
+CREATE INDEX idx__strategy2 on strategy(dt, symbol);
