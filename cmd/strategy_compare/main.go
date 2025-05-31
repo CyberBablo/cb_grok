@@ -66,11 +66,10 @@ func main() {
 }
 
 func providePgxConnection() fx.Option {
-	return fx.Provide(func(log *zap.Logger) *sqlx.DB {
-		// DSN: формат подключения
-		dsn := "postgres://postgres:password@0.0.0.0:5433/cb_grok?sslmode=disable"
+	return fx.Provide(func(log *zap.Logger, cfg config.Config) *sqlx.DB {
+		dsn := cfg.PostgreSQL.DSN()
+		log.Info("Connecting to database", zap.String("dsn", dsn))
 
-		// Используем pgx через stdlib
 		db := sqlx.MustConnect("pgx", dsn)
 		log.Info("Connected to database")
 

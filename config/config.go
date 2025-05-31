@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"gopkg.in/yaml.v3"
 	"os"
 )
@@ -8,6 +9,7 @@ import (
 type Config struct {
 	TelegramBot TelegramBot `yaml:"telegram_bot"`
 	Binance     Exchange    `yaml:"binance"`
+	PostgreSQL  PostgreSQL  `yaml:"postgresql"`
 }
 
 type Exchange struct {
@@ -20,6 +22,27 @@ type Exchange struct {
 type TelegramBot struct {
 	Token  string `yaml:"token"`
 	ChatId int64  `yaml:"chat_id"`
+}
+
+type PostgreSQL struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	Database string `yaml:"database"`
+	SSLMode  string `yaml:"sslmode"`
+}
+
+func (p *PostgreSQL) DSN() string {
+	return fmt.Sprintf(
+		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
+		p.User,
+		p.Password,
+		p.Host,
+		p.Port,
+		p.Database,
+		p.SSLMode,
+	)
 }
 
 func NewConfig() (Config, error) {
