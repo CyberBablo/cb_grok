@@ -77,14 +77,23 @@ func (e *bybitImpl) FetchOHLCV(symbol string, timeframe string, total int) ([]mo
 		e.log.Info(fmt.Sprintf("fetched ohlcv: %d/%d", len(candles), total))
 	}
 
-	if len(candles) > total {
-		candles = candles[len(candles)-total:]
-	}
-
 	sort.Slice(candles, func(i, j int) bool {
 		return candles[i].Timestamp < candles[j].Timestamp
 	})
 
+	if len(candles) > 1 {
+		uniqueCandles := []models.OHLCV{candles[0]}
+		for i := 1; i < len(candles); i++ {
+			if candles[i].Timestamp != candles[i-1].Timestamp {
+				uniqueCandles = append(uniqueCandles, candles[i])
+			}
+		}
+		candles = uniqueCandles
+	}
+
+	if len(candles) > total {
+		candles = candles[len(candles)-total:]
+	}
 	return candles, nil
 }
 

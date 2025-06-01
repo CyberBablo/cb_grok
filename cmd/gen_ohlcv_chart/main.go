@@ -17,13 +17,13 @@ import (
 func main() {
 	log := logger.NewLogger()
 
-	ex, err := exchange.NewBinance(false, "", "", "")
+	ex, err := exchange.NewBybit(false, "", "")
 	if err != nil {
 		log.Error("optimize: initialize Bybit exchange", zap.Error(err))
 		return
 	}
 
-	candles, err := ex.FetchOHLCV("BNB/USDT", "15m", 5760)
+	candles, err := ex.FetchOHLCV("BNB/USDT", "15m", 1200)
 	if err != nil {
 		log.Error("optimize: fetch ohlcv", zap.Error(err))
 		return
