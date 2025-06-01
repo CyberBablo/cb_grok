@@ -37,11 +37,6 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 
 	currentCandle := appliedOHLCV[len(appliedOHLCV)-1]
 
-	//if len(appliedOHLCV) > 2870 {
-	//	b, _ := json.Marshal(currentCandle)
-	//	fmt.Printf("%s\n", string(b))
-	//}
-
 	currentSignal := currentCandle.Signal
 	currentPrice := currentCandle.Close
 
@@ -61,7 +56,7 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 
 			transactionAmount = t.state.assets
 
-			err := t.exch.CreateOrder(t.model.Symbol, "sell", transactionAmount, 0, 0)
+			err := t.exch.PlaceMarketOrder(t.model.Symbol, "sell", transactionAmount, 0, 0)
 			if err != nil {
 				t.log.Error("create order failed", zap.Error(err))
 			}
@@ -76,7 +71,7 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 
 			transactionAmount = t.state.assets
 
-			err := t.exch.CreateOrder(t.model.Symbol, "sell", transactionAmount, 0, 0)
+			err := t.exch.PlaceMarketOrder(t.model.Symbol, "sell", transactionAmount, 0, 0)
 			if err != nil {
 				t.log.Error("create order failed", zap.Error(err))
 			}
@@ -90,7 +85,7 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 
 			transactionAmount = t.state.assets
 
-			err := t.exch.CreateOrder(t.model.Symbol, "sell", transactionAmount, 0, 0)
+			err := t.exch.PlaceMarketOrder(t.model.Symbol, "sell", transactionAmount, 0, 0)
 			if err != nil {
 				t.log.Error("create order failed", zap.Error(err))
 			}
@@ -104,7 +99,7 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 
 		transactionAmount = t.state.cash / currentPrice
 
-		err := t.exch.CreateOrder(t.model.Symbol, "buy", transactionAmount, 0, 0)
+		err := t.exch.PlaceMarketOrder(t.model.Symbol, "buy", transactionAmount, 0, 0)
 		if err != nil {
 			t.log.Error("create order failed", zap.Error(err))
 		}

@@ -15,6 +15,7 @@ import (
 	"github.com/c-bata/goptuna"
 	"github.com/c-bata/goptuna/tpe"
 	"github.com/dnlo/struct2csv"
+	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"time"
@@ -40,7 +41,7 @@ func NewOptimize(log *zap.Logger, bt backtest.Backtest, tg *telegram.TelegramSer
 }
 
 func (o *optimize) Run(params RunOptimizeParams) error {
-	ex, err := exchange.NewBinance(false, o.cfg.Binance.ApuPublic, o.cfg.Binance.ApiSecret, o.cfg.Binance.ProxyUrl)
+	ex, err := exchange.NewBinance(false, o.cfg.Binance.ApiPublic, o.cfg.Binance.ApiSecret, o.cfg.Binance.ProxyUrl)
 	if err != nil {
 		o.log.Error("optimize: initialize Binance exchange", zap.Error(err))
 		return err
@@ -200,3 +201,7 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 
 	return nil
 }
+
+var Module = fx.Module("optimize",
+	fx.Provide(NewOptimize),
+)

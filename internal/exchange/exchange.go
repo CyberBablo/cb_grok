@@ -2,11 +2,11 @@ package exchange
 
 import (
 	"cb_grok/pkg/models"
+	"context"
+	"github.com/govalues/decimal"
 )
 
 type Exchange interface {
-	FetchOHLCV(symbol string, timeframe string, total int) ([]models.OHLCV, error)
-	CreateOrder(symbol, side string, amount, stopLoss, takeProfit float64) error
-
-	GetWSUrl() string
+	FetchSpotOHLCV(symbol string, timeframe Timeframe, total int) ([]models.OHLCV, error)
+	PlaceSpotMarketOrder(ctx context.Context, symbol string, orderSide OrderSide, amount decimal.Decimal) error
 }

@@ -2,28 +2,26 @@ package exchange
 
 import (
 	"cb_grok/pkg/models"
+	"context"
+	"github.com/govalues/decimal"
 )
 
-type mockImpl struct {
+type mock struct {
 }
 
 func NewMockExchange() Exchange {
-	return &mockImpl{}
+	return &mock{}
 }
 
-func (e *mockImpl) FetchOHLCV(symbol, timeframe string, limit int) ([]models.OHLCV, error) {
+func (e *mock) FetchSpotOHLCV(symbol string, timeframe Timeframe, limit int) ([]models.OHLCV, error) {
 	return nil, nil
 }
 
-func (e *mockImpl) CreateOrder(symbol, side string, amount float64, stopLoss, takeProfit float64) error {
+func (e *mock) PlaceSpotMarketOrder(ctx context.Context, symbol string, orderSide OrderSide, amount decimal.Decimal) error {
 
 	return nil
 }
 
-func (e *mockImpl) FetchBalance() (map[string]float64, error) {
+func (e *mock) FetchBalance() (map[string]float64, error) {
 	return map[string]float64{}, nil
-}
-
-func (e *mockImpl) GetWSUrl() string {
-	return "ws://localhost:8080/ws"
 }

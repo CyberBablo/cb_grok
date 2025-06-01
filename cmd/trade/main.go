@@ -28,11 +28,13 @@ func main() {
 	).Run()
 }
 
-func runTrade(log *zap.Logger, tg *telegram.TelegramService) error {
+func runTrade(log *zap.Logger, tg *telegram.TelegramService, cfg *config.Config) error {
 	var (
 		modelFilename string
+		tradingMode   string
 	)
 	flag.StringVar(&modelFilename, "model", "", "Model filename")
+	flag.StringVar(&tradingMode, "trading_mode", "simulation", "Trading mode (simulation, demo, live). Default: simulation")
 	flag.Parse()
 
 	mod, err := model.Load(modelFilename)
@@ -41,13 +43,27 @@ func runTrade(log *zap.Logger, tg *telegram.TelegramService) error {
 		return fmt.Errorf("error to load model: %w", err)
 	}
 
-	mockExch := exchange.NewMockExchange()
+	var exch exchange.Exchange
+
+	switch tradingMode {
+	case "demo":
+		exch, err = exchange.NewBybit(true, cfg.Bybit.ApiPublic, cfg.Bybit.ApiSecret)
+	case "live":
+		exch, err = exchange.NewBybit(false, cfg.Bybit.ApiPublic, cfg.Bybit.ApiSecret)
+	default:
+		exch = exchange.NewMockExchange()
+	}
+
+	if err != nil {
+		log.Error("Failed to initialize exchange", zap.Error(err), zap.String("trading_mode", tradingMode))
+		return fmt.Errorf("failed to initialize exchange: %w", err)
+	}
 
 	trade := trader.NewTrader(log, tg)
 
 	trade.Setup(trader.TraderParams{
 		Model:          mod,
-		Exchange:       mockExch,
+		Exchange:       exch,
 		Strategy:       strategy.NewLinearBiasStrategy(),
 		Settings:       nil, // default
 		InitialCapital: 10000,
