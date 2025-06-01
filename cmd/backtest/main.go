@@ -109,6 +109,8 @@ func runBacktest(cfg *config.Config, backtest backtest.Backtest, tg *telegram.Te
 		return err
 	}
 
+	zap.L().Info("backtest completed")
+
 	msg := fmt.Sprintf(
 		"Результат бектеста:\n\nМодель: %s\nСимвол: %s\nTimeframe: %s\nКол-во свечей: %d\nКол-во дней на валидации: %d\nКоличество сделок: %d\nSharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%",
 		modelFilename, mod.Symbol, timeframe, len(result.TradeState.GetOHLCV()), setDays, len(result.Orders), result.SharpeRatio, result.FinalCapital, result.MaxDrawdown, result.WinRate)
@@ -123,6 +125,8 @@ func runBacktest(cfg *config.Config, backtest backtest.Backtest, tg *telegram.Te
 	if err != nil {
 		zap.L().Error("report: send to telegram", zap.Error(err))
 	}
+
+	zap.L().Info("report sent to Telegram")
 
 	return nil
 

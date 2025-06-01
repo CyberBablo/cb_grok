@@ -81,8 +81,6 @@ func (b *backtest) Run(ohlcv []models.OHLCV, mod *model.Model) (*BacktestResult,
 
 	tradeState := trade.GetState()
 
-	zap.L().Info("backtest completed")
-
 	if len(tradeState.GetOrders()) > 1 {
 		return &BacktestResult{
 			SharpeRatio:  tradeState.CalculateSharpeRatio(),

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	tele "github.com/tucnak/telebot"
 	"go.uber.org/fx"
-	"log"
+	"go.uber.org/zap"
 	"os"
 	"strings"
 )
@@ -40,7 +40,7 @@ func (s *TelegramService) SendMessage(text string) {
 	go func() {
 		_, err := s.bot.Send(&tele.Chat{ID: s.chatID}, text)
 		if err != nil {
-			log.Printf("telegram send error: %s\n", err.Error())
+			zap.L().Error("telegram send error", zap.Error(err))
 		}
 	}()
 }
@@ -79,7 +79,7 @@ func (s *TelegramService) SendFile(b *bytes.Buffer, fileExtension string, text s
 
 		_, err := s.bot.Send(&tele.Chat{ID: s.chatID}, doc)
 		if err != nil {
-			log.Printf("telegram send error: %s\n", err.Error())
+			zap.L().Error("telegram send error", zap.Error(err))
 		}
 	}()
 
