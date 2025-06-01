@@ -20,6 +20,7 @@ type StrategyRepository interface {
 		timeframe *string,
 		dt_left *time.Time,
 		dt_right *time.Time,
+		win_rate *float64,
 	) ([]Strategy, error)
 	Create(ctx context.Context, strategy StrategyCreate) (int64, error)
 	Update(ctx context.Context, id int64, data strategy.StrategyParams) error
@@ -36,9 +37,22 @@ type StrategyRepository interface {
 		dt_create_left *time.Time,
 		dt_create_right *time.Time,
 	) ([]StrategyAcc, error)
+	FetchStrategyAccEx(
+		ctx context.Context,
+		id *int64,
+		strategyID *int64,
+		symbol *string,
+		dt_upd_left *time.Time,
+		dt_upd_right *time.Time,
+		dt_create_left *time.Time,
+		dt_create_right *time.Time,
+	) ([]StrategyAccEx, error)
 	CreateStrategyAcc(ctx context.Context, strategyID int64) (int64, error)
 	UpdateStrategyAcc(ctx context.Context, id int64, strategyID int64) error
 	DeleteStrategyAcc(ctx context.Context, id int64) error
+
+	// StrategyTimeframe table methods
+	FetchStrategyTimeframe(ctx context.Context, name *string) ([]StrategyTimeframe, error)
 }
 
 // StrategyCreate contains all required fields to create a new strategy
@@ -76,6 +90,7 @@ func (r *strategyRepository) Fetch(
 	timeframe *string,
 	dt_left *time.Time,
 	dt_right *time.Time,
+	win_rate *float64,
 ) ([]Strategy, error) {
 	var strategies []Strategy
 	query := `
@@ -101,10 +116,11 @@ func (r *strategyRepository) Fetch(
 				($4::timestamp without time zone is null and $5::timestamp without time zone is null)
 				or dt between $4 and $5
 			)
-		ORDER BY id
+			and ($6::double precision is null or win_rate > $6)
+		;
 	`
 
-	err := r.db.SelectContext(ctx, &strategies, query, id, symbol, timeframe, dt_left, dt_right)
+	err := r.db.SelectContext(ctx, &strategies, query, id, symbol, timeframe, dt_left, dt_right, win_rate)
 	if err != nil {
 		r.log.Error("failed to fetch strategies",
 			zap.Error(err),
@@ -124,7 +140,7 @@ func (r *strategyRepository) Create(ctx context.Context, strategy StrategyCreate
 		INSERT INTO strategy (symbol, timeframe, trials, workers, val_set_days, train_set_day, 
 							  win_rate, data, from_dt, to_dt, dt)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-		RETURNING id
+		RETURNING id;
 	`,
 		strategy.Symbol,
 		strategy.Timeframe,
@@ -152,8 +168,10 @@ func (r *strategyRepository) Create(ctx context.Context, strategy StrategyCreate
 func (r *strategyRepository) Update(ctx context.Context, id int64, data strategy.StrategyParams) error {
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE strategy
-		SET data = $1, dt = $2
-		WHERE id = $3
+		SET
+			data = $1,
+			dt = $2
+		WHERE id = $3;
 	`, StrategyData(data), time.Now(), id)
 
 	if err != nil {
@@ -165,7 +183,7 @@ func (r *strategyRepository) Update(ctx context.Context, id int64, data strategy
 
 // Delete removes a strategy from the database
 func (r *strategyRepository) Delete(ctx context.Context, id int64) error {
-	_, err := r.db.ExecContext(ctx, `DELETE FROM strategy WHERE id = $1`, id)
+	_, err := r.db.ExecContext(ctx, `DELETE FROM strategy WHERE id = $1;`, id)
 	if err != nil {
 		r.log.Error("failed to delete strategy", zap.Int64("id", id), zap.Error(err))
 		return err
@@ -235,6 +253,69 @@ func (r *strategyRepository) FetchStrategyAcc(
 	return strategies, nil
 }
 
+func (r *strategyRepository) FetchStrategyAccEx(
+	ctx context.Context,
+	id *int64,
+	strategyID *int64,
+	symbol *string,
+	dt_upd_left *time.Time,
+	dt_upd_right *time.Time,
+	dt_create_left *time.Time,
+	dt_create_right *time.Time,
+) ([]StrategyAccEx, error) {
+	var strategies []StrategyAccEx
+	query := `
+		SELECT
+			sa.id,
+			sa.strategy_id,
+			sa.symbol,
+			sa.timeframe,
+			st.value as timeframe_config,
+			s.win_rate as win_rate,
+			sa.dt_upd,
+			sa.dt_create
+		FROM strategy_acc sa
+			JOIN strategy s on s.id = sa.strategy_id
+			JOIN strategy_timeframe st on st.name = sa.timeframe
+		WHERE TRUE
+			and ($1::bigint is null or sa.id = $1)
+			and ($2::bigint is null or sa.strategy_id = $2)
+			and ($3::text is null or sa.symbol = $3)
+			and (
+				($4::timestamp without time zone is null and $5::timestamp without time zone is null)
+				or sa.dt_upd between $4 and $5
+			)
+			and (
+				($6::timestamp without time zone is null and $7::timestamp without time zone is null)
+				or sa.dt_create between $6 and $7
+			)
+		;
+	`
+	err := r.db.SelectContext(
+		ctx,
+		&strategies,
+		query,
+		id,
+		strategyID,
+		symbol,
+		dt_upd_left,
+		dt_upd_right,
+		dt_create_left,
+		dt_create_right,
+	)
+
+	if err != nil {
+		r.log.Error("failed to fetch strategy_acc records",
+			zap.Error(err),
+			zap.Any("id", id),
+			zap.Any("strategy_id", strategyID),
+			zap.Any("symbol", symbol))
+		return nil, err
+	}
+
+	return strategies, nil
+}
+
 // CreateStrategyAcc adds a new record to the strategy_acc table
 func (r *strategyRepository) CreateStrategyAcc(ctx context.Context, strategyID int64) (int64, error) {
 	var id int64
@@ -250,7 +331,7 @@ func (r *strategyRepository) CreateStrategyAcc(ctx context.Context, strategyID i
 		)
 		INSERT INTO strategy_acc (strategy_id, symbol, timeframe, dt_upd, dt_create)
 		VALUES ($1, (select symbol from cte), (select timeframe from cte), now(), now())
-		RETURNING id
+		RETURNING id;
 	`, strategyID).Scan(&id)
 
 	if err != nil {
@@ -280,7 +361,7 @@ func (r *strategyRepository) UpdateStrategyAcc(ctx context.Context, id int64, st
 			symbol = (select symbol from cte),
 			timeframe = (select timeframe from cte),
 			dt_upd = now()
-		WHERE id = $2
+		WHERE id = $2;
 	`, strategyID, id)
 
 	if err != nil {
@@ -295,10 +376,34 @@ func (r *strategyRepository) UpdateStrategyAcc(ctx context.Context, id int64, st
 
 // DeleteStrategyAcc removes a record from the strategy_acc table
 func (r *strategyRepository) DeleteStrategyAcc(ctx context.Context, id int64) error {
-	_, err := r.db.ExecContext(ctx, `DELETE FROM strategy_acc WHERE id = $1`, id)
+	_, err := r.db.ExecContext(ctx, `DELETE FROM strategy_acc WHERE id = $1;`, id)
 	if err != nil {
 		r.log.Error("failed to delete strategy_acc", zap.Int64("id", id), zap.Error(err))
 		return err
 	}
 	return nil
+}
+
+func (r *strategyRepository) FetchStrategyTimeframe(ctx context.Context, name *string) ([]StrategyTimeframe, error) {
+	var timeframes []StrategyTimeframe
+
+	query := `
+		SELECT
+			id,
+			name,
+			value
+		FROM strategy_timeframe
+		WHERE TRUE
+			AND ($1::text IS NULL OR name = $1)
+		ORDER BY id;
+	`
+	err := r.db.SelectContext(ctx, &timeframes, query, name)
+	if err != nil {
+		r.log.Error("failed to fetch strategy_timeframe records",
+			zap.Error(err),
+			zap.Any("name", name))
+		return nil, err
+	}
+
+	return timeframes, nil
 }

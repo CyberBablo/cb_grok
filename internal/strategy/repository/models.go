@@ -35,6 +35,29 @@ type StrategyAcc struct {
 	DTCreate   time.Time `db:"dt_create"`
 }
 
+type StrategyAccEx struct {
+	ID              int64          `db:"id"`
+	StrategyID      int64          `db:"strategy_id"`
+	Symbol          string         `db:"symbol"`
+	Timeframe       string         `db:"timeframe"`
+	DTUpd           time.Time      `db:"dt_upd"`
+	DTCreate        time.Time      `db:"dt_create"`
+	TimeframeConfig TimeframeValue `db:"timeframe_config"`
+	WinRate         float64        `db:"win_rate"`
+}
+
+// StrategyTimeframe represents a row in the strategy_timeframe table
+type StrategyTimeframe struct {
+	ID    int64          `db:"id"`
+	Name  string         `db:"name"`
+	Value TimeframeValue `db:"value"`
+}
+
+// TimeframeValue is a JSON structure containing timeframe configuration
+type TimeframeValue struct {
+	DTDiff int64 `json:"dt_diff"`
+}
+
 // StrategyData is a wrapper around StrategyParams for JSON serialization/deserialization
 type StrategyData strategy.StrategyParams
 
@@ -74,4 +97,25 @@ func (d *ParamsData) Scan(value interface{}) error {
 	}
 
 	return json.Unmarshal(b, &d)
+}
+
+// Value implements the driver.Valuer interface for TimeframeValue JSON serialization
+func (tv TimeframeValue) Value() (driver.Value, error) {
+	return json.Marshal(tv)
+}
+
+// Scan implements the sql.Scanner interface for TimeframeValue JSON deserialization
+func (tv *TimeframeValue) Scan(value interface{}) error {
+	b, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed")
+	}
+
+	// Handle null JSON values
+	if len(b) == 0 {
+		*tv = TimeframeValue{}
+		return nil
+	}
+
+	return json.Unmarshal(b, tv)
 }

@@ -11,3 +11,10 @@ CREATE TABLE IF NOT EXISTS strategy_acc(
 
 CREATE UNIQUE INDEX uidx__strategy_acc__core on strategy_acc(symbol, timeframe, strategy_id);
 CREATE INDEX idx__strategy_acc on strategy_acc(symbol, timeframe);
+
+
+CREATE TABLE IF NOT EXISTS strategy_timeframe(
+    id bigint primary key generated always as identity,
+    name VARCHAR(512) not null,
+		value json not null
+);

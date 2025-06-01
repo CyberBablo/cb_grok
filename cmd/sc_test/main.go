@@ -94,7 +94,8 @@ func generateTestData(
 
 	ctx := context.Background()
 
-	// Seed the random number generator
+	// In newer Go versions, rand is auto-seeded, but we'll keep this for compatibility
+	// with older Go versions
 	rand.Seed(time.Now().UnixNano())
 
 	// Clear existing data if requested
@@ -115,7 +116,64 @@ func generateTestData(
 			return
 		}
 
+		// Clear strategy_timeframe records
+		_, err = db.ExecContext(ctx, "DELETE FROM strategy_timeframe")
+		if err != nil {
+			log.Error("Failed to clear strategy_timeframe data", zap.Error(err))
+			return
+		}
+
 		log.Info("Existing data cleared")
+	}
+
+	// Insert or update timeframe configurations
+	log.Info("Setting up timeframe configurations")
+	for _, tf := range timeframes {
+		// Generate random dt_diff values (in seconds) between 1 day and 7 days
+		dtDiff := int64(86400 + rand.Intn(6*86400)) // 1-7 days in seconds
+
+		// Check if entry exists
+		var count int
+		err := db.GetContext(ctx, &count, "SELECT COUNT(*) FROM strategy_timeframe WHERE name = $1", tf)
+		if err != nil {
+			log.Error("Failed to check strategy_timeframe", zap.Error(err))
+			continue
+		}
+
+		if count == 0 {
+			// Insert new record
+			_, err := db.ExecContext(ctx, `
+				INSERT INTO strategy_timeframe (name, value)
+				VALUES ($1, $2)
+			`, tf, fmt.Sprintf(`{"dt_diff":%d}`, dtDiff))
+
+			if err != nil {
+				log.Error("Failed to insert strategy_timeframe",
+					zap.String("timeframe", tf),
+					zap.Error(err))
+			} else {
+				log.Info("Created timeframe config",
+					zap.String("timeframe", tf),
+					zap.Int64("dt_diff", dtDiff))
+			}
+		} else {
+			// Update existing record
+			_, err := db.ExecContext(ctx, `
+				UPDATE strategy_timeframe
+				SET value = $2
+				WHERE name = $1
+			`, tf, fmt.Sprintf(`{"dt_diff":%d}`, dtDiff))
+
+			if err != nil {
+				log.Error("Failed to update strategy_timeframe",
+					zap.String("timeframe", tf),
+					zap.Error(err))
+			} else {
+				log.Info("Updated timeframe config",
+					zap.String("timeframe", tf),
+					zap.Int64("dt_diff", dtDiff))
+			}
+		}
 	}
 
 	// Select subset of symbols to use
@@ -204,7 +262,7 @@ func generateTestData(
 			if key[:len(symbol)] == symbol {
 				// Fetch each strategy and find the one with highest win rate
 				for _, id := range ids {
-					strategies, err := strategyRepo.Fetch(ctx, &id, nil, nil, nil, nil)
+					strategies, err := strategyRepo.Fetch(ctx, &id, nil, nil, nil, nil, nil)
 					if err != nil || len(strategies) == 0 {
 						continue
 					}
