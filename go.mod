@@ -3,10 +3,11 @@ module cb_grok
 go 1.24.2
 
 require (
+	github.com/bybit-exchange/bybit.go.api v0.0.0-20250421211709-d5b2b36fdf4b
 	github.com/c-bata/goptuna v0.9.0
-	github.com/ccxt/ccxt/go/v4 v4.4.73
 	github.com/cinar/indicator v1.3.0
 	github.com/dnlo/struct2csv v0.0.0-20190928115744-2f584471b24e
+	github.com/ethereum/go-ethereum v1.15.7
 	github.com/go-echarts/go-echarts/v2 v2.5.3
 	github.com/gorilla/websocket v1.5.3
 	github.com/samber/lo v1.49.1
@@ -20,38 +21,21 @@ require (
 
 require (
 	github.com/bitly/go-simplejson v0.5.1 // indirect
-	github.com/bits-and-blooms/bitset v1.17.0 // indirect
-	github.com/bybit-exchange/bybit.go.api v0.0.0-20250421211709-d5b2b36fdf4b // indirect
-	github.com/consensys/bavard v0.1.22 // indirect
-	github.com/consensys/gnark-crypto v0.14.0 // indirect
-	github.com/crate-crypto/go-ipa v0.0.0-20240724233137-53bbb0ceb27a // indirect
-	github.com/crate-crypto/go-kzg-4844 v1.1.0 // indirect
-	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
-	github.com/ethereum/c-kzg-4844 v1.0.0 // indirect
-	github.com/ethereum/go-ethereum v1.15.7 // indirect
-	github.com/ethereum/go-verkle v0.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/govalues/decimal v0.1.36 // indirect
 	github.com/holiman/uint256 v1.3.2 // indirect
 	github.com/iancoleman/strcase v0.3.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/mitchellh/hashstructure v1.1.0 // indirect
-	github.com/mitchellh/mapstructure v1.4.1 // indirect
-	github.com/mmcloughlin/addchain v0.4.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/supranational/blst v0.3.14 // indirect
-	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
-	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	go.uber.org/dig v1.18.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
-	golang.org/x/crypto v0.35.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/term v0.29.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
 	gonum.org/v1/gonum v0.14.0 // indirect
-	rsc.io/tmplfunc v0.0.3 // indirect
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )

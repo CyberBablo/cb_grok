@@ -2,8 +2,6 @@ package exchange
 
 import (
 	"cb_grok/pkg/models"
-	"context"
-	"github.com/govalues/decimal"
 )
 
 type mock struct {
@@ -17,8 +15,7 @@ func (e *mock) FetchSpotOHLCV(symbol string, timeframe Timeframe, limit int) ([]
 	return nil, nil
 }
 
-func (e *mock) PlaceSpotMarketOrder(ctx context.Context, symbol string, orderSide OrderSide, amount decimal.Decimal) error {
-
+func (e *mock) PlaceSpotMarketOrder(symbol string, orderSide OrderSide, orderAmount float64) error {
 	return nil
 }
 

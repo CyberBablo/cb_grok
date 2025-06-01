@@ -5,7 +5,6 @@ import (
 	"cb_grok/internal/utils/logger"
 	"cb_grok/pkg/models"
 	"fmt"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/components"
 	"github.com/go-echarts/go-echarts/v2/opts"
@@ -16,25 +15,23 @@ import (
 )
 
 func main() {
-	_, _ = logger.NewZapLogger(logger.ZapConfig{
+	log, _ := logger.NewZapLogger(logger.ZapConfig{
 		Level:       "info",
 		Development: true,
 		Encoding:    "console",
 		OutputPaths: []string{"stdout"},
 	})
-	ex, err := bybit.NewBybit("", "", "live")
+	ex, err := bybit.NewBybit("", "", "demo")
 	if err != nil {
 		log.Error("optimize: initialize Bybit exchange", zap.Error(err))
 		return
 	}
 
-	candles, err := ex.FetchSpotOHLCV("BNBUSDT", "4h", 300)
+	candles, err := ex.FetchSpotOHLCV("BNBUSDT", "15m", 1200)
 	if err != nil {
 		log.Error("optimize: fetch ohlcv", zap.Error(err))
 		return
 	}
-
-	fmt.Println("len candles", len(candles))
 
 	//m, _ := model.Load("model_20250415_162115.json")
 
@@ -78,7 +75,7 @@ func klineChart(ohlcv []models.OHLCV) *charts.Kline {
 		x = append(x, time.UnixMilli(ohlcv[i].Timestamp).Format("2006-01-02 15:04"))
 
 		//fmt.Println(o, c, l, h)
-		y = append(y, opts.KlineData{Value: []float64{ohlcv[i].Open, ohlcv[i].Close, ohlcv[i].Low, ohlcv[i].High}})
+		y = append(y, opts.KlineData{Value: []float64{ohlcv[i].Close, ohlcv[i].Open, ohlcv[i].Low, ohlcv[i].High}})
 		prices = append(prices, ohlcv[i].Close)
 	}
 

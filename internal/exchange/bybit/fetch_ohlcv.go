@@ -16,7 +16,14 @@ import (
 
 func (b *bybit) FetchSpotOHLCV(symbol string, timeframe exchange.Timeframe, total int) ([]models.OHLCV, error) {
 	timeframeValue := GetBybitTimeframe(timeframe)
+	if timeframeValue == "" {
+		return nil, fmt.Errorf("unsupported timeframe: %s", timeframe)
+	}
+
 	limit := 1000
+	if total < limit {
+		limit = total
+	}
 
 	var candles []models.OHLCV
 
@@ -82,8 +89,6 @@ func (b *bybit) FetchSpotOHLCV(symbol string, timeframe exchange.Timeframe, tota
 			})
 		}
 
-		zap.L().Info(fmt.Sprintf("fetched ohlcv: %d/%d", len(candles), total))
-
 		if len(result.List) < limit {
 			break
 		}
@@ -98,6 +103,8 @@ func (b *bybit) FetchSpotOHLCV(symbol string, timeframe exchange.Timeframe, tota
 		}
 
 		since = startTimestamp - (int64(limit) * utils.TimeframeToMilliseconds(string(timeframe)))
+
+		zap.L().Info(fmt.Sprintf("fetched ohlcv: %d/%d", len(candles), total))
 
 	}
 

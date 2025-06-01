@@ -5,16 +5,18 @@ import (
 	"context"
 	"fmt"
 	bybitapi "github.com/bybit-exchange/bybit.go.api"
-	"github.com/govalues/decimal"
+	"strconv"
 )
 
-func (b *bybit) PlaceSpotMarketOrder(ctx context.Context, symbol string, orderSide exchange.OrderSide, amount decimal.Decimal) error {
+func (b *bybit) PlaceSpotMarketOrder(symbol string, orderSide exchange.OrderSide, orderAmount float64) error {
 	orderSideValue := GetBybitOrderSide(orderSide)
 	if orderSideValue == "" {
 		return fmt.Errorf("unsupported order side: %s", orderSide)
 	}
 
-	orderResult, err := b.client.NewPlaceOrderService("spot", symbol, orderSideValue, "Market", amount.String()).Do(ctx)
+	orderAmountValue := strconv.FormatFloat(orderAmount, 'f', -1, 64)
+
+	orderResult, err := b.client.NewPlaceOrderService("spot", symbol, orderSideValue, "Market", orderAmountValue).Do(context.Background())
 	if err != nil {
 		fmt.Println(err)
 		return nil

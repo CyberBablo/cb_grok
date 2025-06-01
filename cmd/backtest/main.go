@@ -13,6 +13,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/ethereum/go-ethereum/log"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
@@ -66,6 +67,67 @@ func main() {
 	app.Run()
 }
 
+func runBacktest(cfg *config.Config, backtest backtest.Backtest, tg *telegram.TelegramService) error {
+
+	var (
+		modelFilename string
+		setDays       int
+		timeframe     string
+	)
+
+	flag.StringVar(&timeframe, "timeframe", "", "Timeframe (f.e 1h)")
+	flag.IntVar(&setDays, "set-days", 0, "Number of days for trading set")
+	flag.StringVar(&modelFilename, "model", "", "Model filename")
+	flag.Parse()
+
+	ex, err := bybit.NewBybit(cfg.Bybit.APIKey, cfg.Bybit.APISecret, exchange.TradingModeLive)
+	if err != nil {
+		log.Error("backtest: initialize exchange", zap.Error(err))
+		return err
+	}
+
+	mod, err := model.Load(modelFilename)
+	if err != nil {
+		log.Error("Failed to load model params", zap.Error(err))
+		return fmt.Errorf("error to load model: %w", err)
+	}
+
+	timeframeSec := utils.TimeframeToMilliseconds(timeframe) / 1000
+	candlesPerDay := (24 * 60 * 60) / int(timeframeSec)
+
+	candlesTotal := setDays * candlesPerDay
+
+	candles, err := ex.FetchSpotOHLCV(mod.Symbol, exchange.Timeframe(timeframe), candlesTotal)
+	if err != nil {
+		zap.L().Error("backtest: fetch ohlcv", zap.Error(err))
+		return err
+	}
+
+	result, err := backtest.Run(candles, mod)
+	if err != nil {
+		zap.L().Error("backtest: run backtest", zap.Error(err))
+		return err
+	}
+
+	msg := fmt.Sprintf(
+		"Результат бектеста:\n\nМодель: %s\nСимвол: %s\nTimeframe: %s\nКол-во свечей: %d\nКол-во дней на валидации: %d\nКоличество сделок: %d\nSharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%",
+		modelFilename, mod.Symbol, timeframe, len(result.TradeState.GetOHLCV()), setDays, len(result.Orders), result.SharpeRatio, result.FinalCapital, result.MaxDrawdown, result.WinRate)
+
+	time.Sleep(1000 * time.Millisecond)
+	chartBuff, err := result.TradeState.GenerateCharts()
+	if err != nil {
+		zap.L().Error("report: generate charts", zap.Error(err))
+	}
+
+	err = tg.SendFile(chartBuff, "html", msg)
+	if err != nil {
+		zap.L().Error("report: send to telegram", zap.Error(err))
+	}
+
+	return nil
+
+}
+
 // registerLifecycleHooks registers lifecycle hooks for the application
 func registerLifecycleHooks(
 	lifecycle fx.Lifecycle,
@@ -73,6 +135,7 @@ func registerLifecycleHooks(
 	cfg *config.Config,
 	tg *telegram.TelegramService,
 	backtest backtest.Backtest,
+	shutdowner fx.Shutdowner,
 ) {
 	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
@@ -81,54 +144,16 @@ func registerLifecycleHooks(
 				zap.String("environment", cfg.App.Environment),
 			)
 
-			var (
-				modelFilename string
-				setDays       int
-				timeframe     string
-			)
+			exitCode := 0
+			go func() {
+				err := runBacktest(cfg, backtest, tg)
+				if err != nil {
+					log.Error("Failed to run backtest", zap.Error(err))
+					exitCode = 1
+				}
 
-			flag.StringVar(&timeframe, "timeframe", "", "Timeframe (f.e 1h)")
-			flag.IntVar(&setDays, "set-days", 0, "Number of days for trading set")
-			flag.StringVar(&modelFilename, "model", "", "Model filename")
-			flag.Parse()
-
-			ex, err := bybit.NewBybit(cfg.Bybit.APIKey, cfg.Bybit.APISecret, exchange.TradingModeLive)
-			if err != nil {
-				log.Error("optimize: initialize Binance exchange", zap.Error(err))
-				return err
-			}
-
-			mod, err := model.Load(modelFilename)
-			if err != nil {
-				log.Error("Failed to load model params", zap.Error(err))
-				return fmt.Errorf("error to load model: %w", err)
-			}
-
-			timeframeSec := utils.TimeframeToMilliseconds(timeframe) / 1000
-			candlesPerDay := (24 * 60 * 60) / int(timeframeSec)
-
-			candlesTotal := setDays * candlesPerDay
-
-			candles, err := ex.FetchSpotOHLCV(mod.Symbol, timeframe, candlesTotal)
-
-			result, err := backtest.Run(candles, mod)
-			if err != nil {
-				return err
-			}
-
-			msg := fmt.Sprintf(
-				"Результат бектеста:\n\nМодель: %s\nСимвол: %s\nTimeframe: %s\nКол-во свечей: %d\nКол-во дней на валидации: %d\nКоличество сделок: %d\nSharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%",
-				modelFilename, mod.Symbol, timeframe, len(result.TradeState.GetOHLCV()), setDays, len(result.Orders), result.SharpeRatio, result.FinalCapital, result.MaxDrawdown, result.WinRate)
-
-			time.Sleep(1000 * time.Millisecond)
-			chartBuff, err := result.TradeState.GenerateCharts()
-			if err != nil {
-				log.Error("report: generate charts", zap.Error(err))
-			}
-			err = tg.SendFile(chartBuff, "html", msg)
-			if err != nil {
-				log.Error("report: send to telegram", zap.Error(err))
-			}
+				_ = shutdowner.Shutdown(fx.ExitCode(exitCode))
+			}()
 
 			return nil
 		},

@@ -56,7 +56,7 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 
 			transactionAmount = t.state.assets
 
-			err := t.exch.PlaceMarketOrder(t.model.Symbol, "sell", transactionAmount, 0, 0)
+			err := t.exch.PlaceSpotMarketOrder(t.model.Symbol, "sell", transactionAmount)
 			if err != nil {
 				t.log.Error("create order failed", zap.Error(err))
 			}
@@ -71,7 +71,7 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 
 			transactionAmount = t.state.assets
 
-			err := t.exch.PlaceMarketOrder(t.model.Symbol, "sell", transactionAmount, 0, 0)
+			err := t.exch.PlaceSpotMarketOrder(t.model.Symbol, "sell", transactionAmount)
 			if err != nil {
 				t.log.Error("create order failed", zap.Error(err))
 			}
@@ -85,7 +85,7 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 
 			transactionAmount = t.state.assets
 
-			err := t.exch.PlaceMarketOrder(t.model.Symbol, "sell", transactionAmount, 0, 0)
+			err := t.exch.PlaceSpotMarketOrder(t.model.Symbol, "sell", transactionAmount)
 			if err != nil {
 				t.log.Error("create order failed", zap.Error(err))
 			}
@@ -99,7 +99,7 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 
 		transactionAmount = t.state.cash / currentPrice
 
-		err := t.exch.PlaceMarketOrder(t.model.Symbol, "buy", transactionAmount, 0, 0)
+		err := t.exch.PlaceSpotMarketOrder(t.model.Symbol, "buy", transactionAmount)
 		if err != nil {
 			t.log.Error("create order failed", zap.Error(err))
 		}

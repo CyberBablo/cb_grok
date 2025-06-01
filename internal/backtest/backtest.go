@@ -8,6 +8,7 @@ import (
 	"cb_grok/internal/trader"
 	"cb_grok/pkg/models"
 	"fmt"
+	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
@@ -80,6 +81,8 @@ func (b *backtest) Run(ohlcv []models.OHLCV, mod *model.Model) (*BacktestResult,
 
 	tradeState := trade.GetState()
 
+	zap.L().Info("backtest completed")
+
 	if len(tradeState.GetOrders()) > 1 {
 		return &BacktestResult{
 			SharpeRatio:  tradeState.CalculateSharpeRatio(),
@@ -97,3 +100,7 @@ func (b *backtest) Run(ohlcv []models.OHLCV, mod *model.Model) (*BacktestResult,
 		TradeState:   tradeState,
 	}, nil
 }
+
+var Module = fx.Module("backtest",
+	fx.Provide(NewBacktest),
+)

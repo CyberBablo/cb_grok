@@ -5,6 +5,7 @@ import (
 	"cb_grok/config"
 	"cb_grok/internal/backtest"
 	"cb_grok/internal/exchange"
+	"cb_grok/internal/exchange/bybit"
 	"cb_grok/internal/model"
 	"cb_grok/internal/strategy"
 	"cb_grok/internal/telegram"
@@ -28,10 +29,10 @@ type optimize struct {
 	log *zap.Logger
 	bt  backtest.Backtest
 	tg  *telegram.TelegramService
-	cfg config.Config
+	cfg *config.Config
 }
 
-func NewOptimize(log *zap.Logger, bt backtest.Backtest, tg *telegram.TelegramService, cfg config.Config) Optimize {
+func NewOptimize(log *zap.Logger, bt backtest.Backtest, tg *telegram.TelegramService, cfg *config.Config) Optimize {
 	return &optimize{
 		log: log,
 		bt:  bt,
@@ -41,7 +42,7 @@ func NewOptimize(log *zap.Logger, bt backtest.Backtest, tg *telegram.TelegramSer
 }
 
 func (o *optimize) Run(params RunOptimizeParams) error {
-	ex, err := exchange.NewBinance(false, o.cfg.Binance.ApiPublic, o.cfg.Binance.ApiSecret, o.cfg.Binance.ProxyUrl)
+	ex, err := bybit.NewBybit("", "", "live")
 	if err != nil {
 		o.log.Error("optimize: initialize Binance exchange", zap.Error(err))
 		return err
@@ -53,7 +54,7 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 
 	candlesTotal := (params.ValSetDays + params.TrainSetDays) * candlesPerDay
 
-	candles, err := ex.FetchOHLCV(params.Symbol, params.Timeframe, candlesTotal)
+	candles, err := ex.FetchSpotOHLCV(params.Symbol, exchange.Timeframe(params.Timeframe), candlesTotal)
 
 	if err != nil {
 		o.log.Error("optimize: fetch ohlcv", zap.Error(err))

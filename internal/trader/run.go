@@ -19,7 +19,7 @@ func (t *trader) Run(mode TradeMode) error {
 		return fmt.Errorf("unsupported trade mode")
 	}
 
-	wsUrl := t.exch.GetWSUrl()
+	wsUrl := "ws://localhost:8080/ws"
 
 	conn, _, err := websocket.DefaultDialer.Dial(wsUrl, nil)
 	if err != nil {
