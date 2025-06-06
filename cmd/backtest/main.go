@@ -125,6 +125,7 @@ func runBacktest(cfg *config.Config, backtest backtest.Backtest, tg *telegram.Te
 	if err != nil {
 		zap.L().Error("report: send to telegram", zap.Error(err))
 	}
+	time.Sleep(1000 * time.Millisecond)
 
 	zap.L().Info("report sent to Telegram")
 
