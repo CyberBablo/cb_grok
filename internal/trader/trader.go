@@ -40,7 +40,8 @@ var (
 
 type Trader interface {
 	Setup(params TraderParams)
-	Run(mode TradeMode) error
+	Run(mode TradeMode, timeframe string) error
+	RunSimulation(mode TradeMode) error
 	BacktestAlgo(appliedOHLCV []models.AppliedOHLCV) (*Action, error)
 	GetState() State
 }

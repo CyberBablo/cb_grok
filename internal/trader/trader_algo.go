@@ -2,12 +2,20 @@ package trader
 
 import (
 	"cb_grok/pkg/models"
+	"encoding/json"
 	"go.uber.org/zap"
 	"strings"
 )
 
 func (t *trader) processAlgo(candle models.OHLCV) (*Action, error) {
-	t.state.ohlcv = append(t.state.ohlcv, candle)
+	if len(t.state.ohlcv) > 0 && t.state.ohlcv[len(t.state.ohlcv)-1].Timestamp == candle.Timestamp {
+		t.state.ohlcv[len(t.state.ohlcv)-1] = candle
+	} else {
+		t.state.ohlcv = append(t.state.ohlcv, candle)
+	}
+
+	candleLog, _ := json.Marshal(candle)
+	t.log.Info("trader: new candle has been processed", zap.String("candle", string(candleLog)))
 
 	appliedOHLCV := t.strategy.ApplyIndicators(t.state.ohlcv, t.model.StrategyParams)
 	if appliedOHLCV == nil {

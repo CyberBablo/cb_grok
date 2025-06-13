@@ -105,7 +105,20 @@ func runTrade(log *zap.Logger, tg *telegram.TelegramService, cfg *config.Config)
 		InitialCapital: 10000,
 	})
 
-	err = trade.Run(trader.ModeSimulation)
+	/*
+		Available timeframes:
+
+		1 3 5 15 30 (min)
+		60 120 240 360 720 (min)
+		D (day)
+		W (week)
+		M (month)
+	*/
+	if tradingMode == "demo" {
+		err = trade.Run(trader.ModeLiveDemo, "60")
+	} else {
+		err = trade.RunSimulation(trader.ModeSimulation)
+	}
 	if err != nil {
 		return err
 	}
