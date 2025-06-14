@@ -19,3 +19,24 @@ type WSKlineMessage struct {
 	} `json:"data,omitempty"`
 	Ts int64 `json:"ts,omitempty"`
 }
+
+type OrderListResult struct {
+	List []Order `json:"list,omitempty"`
+}
+
+type Order struct {
+	OrderId      string `json:"orderId"`
+	Symbol       string `json:"symbol"`
+	Price        string `json:"price"`
+	Qty          string `json:"qty"`
+	Side         string `json:"side"`
+	OrderStatus  string `json:"orderStatus"`
+	CancelType   string `json:"cancelType"`
+	RejectReason string `json:"rejectReason"`
+	AvgPrice     string `json:"avgPrice"`
+	OrderType    string `json:"orderType"`
+	TakeProfit   string `json:"takeProfit"`
+	StopLoss     string `json:"stopLoss"`
+	CreatedTime  string `json:"createdTime"`
+	UpdatedTime  string `json:"updatedTime"`
+}

@@ -2,6 +2,7 @@ package trader
 
 import (
 	"cb_grok/pkg/models"
+	"context"
 	"encoding/json"
 	"go.uber.org/zap"
 	"strings"
@@ -57,67 +58,36 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 
 	transactionAmount := 0.0
 
-	if t.state.isPositionOpen {
-		if currentPrice <= t.state.stopLoss { // sell stop-loss
-			decision = DecisionSell
-			decisionTrigger = TriggerStopLoss
+	orders, err := t.orderUC.GetActiveOrders(context.Background())
+	if err != nil {
+		t.log.Error("failed to fetch active orders", zap.Error(err))
+		return nil, err
+	}
 
-			transactionAmount = t.state.assets
+	isPositionOpen := len(orders) > 0
 
-			err := t.exch.PlaceSpotMarketOrder(t.model.Symbol, "sell", transactionAmount)
-			if err != nil {
-				t.log.Error("create order failed", zap.Error(err))
-			}
-
-			t.state.cash += transactionAmount * currentPrice
-			t.state.assets = 0.0
-			t.state.isPositionOpen = false
-
-		} else if currentPrice >= t.state.takeProfit { // sell take-profit
-			decision = DecisionSell
-			decisionTrigger = TriggerTakeProfit
-
-			transactionAmount = t.state.assets
-
-			err := t.exch.PlaceSpotMarketOrder(t.model.Symbol, "sell", transactionAmount)
-			if err != nil {
-				t.log.Error("create order failed", zap.Error(err))
-			}
-
-			t.state.cash += transactionAmount * currentPrice
-			t.state.assets = 0.0
-			t.state.isPositionOpen = false
-
-		} else if currentSignal == -1 && t.state.assets > 0 { // sell signal
+	if isPositionOpen {
+		if currentSignal == -1 { // sell signal
 			decision = DecisionSell
 
 			transactionAmount = t.state.assets
 
-			err := t.exch.PlaceSpotMarketOrder(t.model.Symbol, "sell", transactionAmount)
+			err := t.orderUC.CreateSpotMarketOrder(t.model.Symbol, "sell", transactionAmount)
 			if err != nil {
 				t.log.Error("create order failed", zap.Error(err))
 			}
-
-			t.state.cash += transactionAmount * currentPrice
-			t.state.assets = 0.0
-			t.state.isPositionOpen = false
 		}
-	} else if currentSignal == 1 && t.state.cash > 0 { // buy signal
-		decision = DecisionBuy
+	} else {
+		if currentSignal == 1 { // buy signal
+			decision = DecisionBuy
 
-		transactionAmount = t.state.cash / currentPrice
+			transactionAmount = t.state.cash / currentPrice
 
-		err := t.exch.PlaceSpotMarketOrder(t.model.Symbol, "buy", transactionAmount)
-		if err != nil {
-			t.log.Error("create order failed", zap.Error(err))
+			err := t.orderUC.CreateSpotMarketOrder(t.model.Symbol, "buy", transactionAmount)
+			if err != nil {
+				t.log.Error("create order failed", zap.Error(err))
+			}
 		}
-
-		t.state.cash = 0.0
-		t.state.assets = transactionAmount
-		t.state.isPositionOpen = true
-
-		t.state.stopLoss = currentPrice - atr*t.settings.StopLossMultiplier
-		t.state.takeProfit = currentPrice + atr*t.settings.TakeProfitMultiplier
 	}
 
 	portfolioValue := t.state.cash + t.state.assets*currentPrice

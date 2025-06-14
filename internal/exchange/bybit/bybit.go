@@ -31,3 +31,7 @@ func NewBybit(apiKey, apiSecret string, tradingMode exchange.TradingMode) (excha
 		client: client,
 	}, nil
 }
+
+func (b *bybit) Name() string {
+	return "bybit"
+}

@@ -5,6 +5,7 @@ type Config struct {
 	Logger   LoggerConfig   `yaml:"logger"`
 	Telegram TelegramConfig `yaml:"telegram"`
 	Bybit    BybitConfig    `yaml:"bybit"`
+	Postgres PostgresConfig `yaml:"postgres"`
 }
 
 type AppConfig struct {
@@ -29,4 +30,14 @@ type TelegramConfig struct {
 	Enabled bool   `yaml:"enabled"`
 	Token   string `yaml:"token"`
 	ChatID  int64  `yaml:"chat_id"`
+}
+
+type PostgresConfig struct {
+	Host     string `yaml:"host"`
+	Port     string `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	DBName   string `yaml:"db_name"`
+	SSLMode  string `yaml:"ssl_mode"`
+	PgDriver string `yaml:"pg_driver"`
 }

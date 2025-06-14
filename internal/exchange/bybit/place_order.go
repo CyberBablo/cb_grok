@@ -4,24 +4,40 @@ import (
 	"cb_grok/internal/exchange"
 	"context"
 	"fmt"
-	bybitapi "github.com/bybit-exchange/bybit.go.api"
 	"strconv"
 )
 
-func (b *bybit) PlaceSpotMarketOrder(symbol string, orderSide exchange.OrderSide, orderAmount float64) error {
+func (b *bybit) PlaceSpotMarketOrder(symbol string, orderSide exchange.OrderSide, quoteQty float64, takeProfit *float64, stopLoss *float64) (string, error) {
 	orderSideValue := GetBybitOrderSide(orderSide)
 	if orderSideValue == "" {
-		return fmt.Errorf("unsupported order side: %s", orderSide)
+		return "", fmt.Errorf("unsupported order side: %s", orderSide)
 	}
 
-	orderAmountValue := strconv.FormatFloat(orderAmount, 'f', -1, 64)
+	quoteQtyValue := strconv.FormatFloat(quoteQty, 'f', -1, 64)
 
-	orderResult, err := b.client.NewPlaceOrderService("spot", symbol, orderSideValue, "Market", orderAmountValue).Do(context.Background())
+	req := b.client.NewPlaceOrderService("spot", symbol, orderSideValue, "Market", quoteQtyValue).MarketUnit("quoteCoin")
+
+	if takeProfit != nil {
+		req.TakeProfit(fmt.Sprintf("%.2f", *takeProfit))
+	}
+	if stopLoss != nil {
+		req.StopLoss(fmt.Sprintf("%.2f", *stopLoss))
+	}
+
+	orderResult, err := req.Do(context.Background())
 	if err != nil {
-		fmt.Println(err)
-		return nil
+		return "", err
 	}
-	fmt.Println(bybitapi.PrettyPrint(orderResult))
 
-	return nil
+	result, err := ParseResponse(orderResult)
+	if err != nil {
+		return "", err
+	}
+
+	orderID, ok := result["orderId"].(string)
+	if !ok {
+		return "", fmt.Errorf("orderId not found in response")
+	}
+
+	return orderID, nil
 }

@@ -30,12 +30,6 @@ type state struct {
 	appliedOHLCV    []models.AppliedOHLCV
 	orders          []Action
 	portfolioValues []PortfolioValue
-
-	cash           float64
-	assets         float64
-	isPositionOpen bool
-	stopLoss       float64
-	takeProfit     float64
 }
 
 type PortfolioValue struct {

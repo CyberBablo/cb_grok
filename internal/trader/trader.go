@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/model"
+	"cb_grok/internal/order"
 	"cb_grok/internal/strategy"
 	"cb_grok/internal/telegram"
 	"cb_grok/pkg/models"
@@ -67,6 +68,8 @@ type trader struct {
 	state    *state
 	settings *TraderSettings
 
+	orderUC order.Usecase
+
 	tg  *telegram.TelegramService
 	log *zap.Logger
 }
@@ -85,6 +88,7 @@ func (t *trader) Setup(params TraderParams) {
 	t.strategy = params.Strategy
 
 	t.exch = params.Exchange
+	t.orderUC.SetExchange(params.Exchange)
 
 	t.state = t.initState(params.InitialCapital)
 	if params.Settings != nil {
@@ -102,6 +106,5 @@ func (t *trader) GetState() State {
 func (t *trader) initState(initialCapital float64) *state {
 	return &state{
 		initialCapital: initialCapital,
-		cash:           initialCapital,
 	}
 }

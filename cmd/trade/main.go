@@ -5,10 +5,14 @@ import (
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/exchange/bybit"
 	"cb_grok/internal/model"
+	"cb_grok/internal/order"
+	orderRepository "cb_grok/internal/order/repository"
+	orderUsecase "cb_grok/internal/order/usecase"
 	"cb_grok/internal/strategy"
 	"cb_grok/internal/telegram"
 	"cb_grok/internal/trader"
 	"cb_grok/internal/utils/logger"
+	"cb_grok/pkg/postgres"
 	"context"
 	"flag"
 	"fmt"
@@ -46,6 +50,27 @@ func main() {
 				Encoding:    cfg.Logger.Encoding,
 				OutputPaths: cfg.Logger.OutputPaths,
 			})
+		}),
+
+		// Postgres
+		fx.Provide(func(cfg *config.Config) (postgres.Postgres, error) {
+			return postgres.InitPsqlDB(&postgres.Conn{
+				Host:     cfg.Postgres.Host,
+				Port:     cfg.Postgres.Port,
+				User:     cfg.Postgres.User,
+				Password: cfg.Postgres.Password,
+				DBName:   cfg.Postgres.DBName,
+				SSLMode:  cfg.Postgres.SSLMode,
+				PgDriver: cfg.Postgres.PgDriver,
+			})
+		}),
+
+		fx.Provide(func(db postgres.Postgres) order.Repository {
+			return orderRepository.New(db)
+		}),
+
+		fx.Provide(func(repo order.Repository) order.Usecase {
+			return orderUsecase.New(repo)
 		}),
 
 		// Modules
