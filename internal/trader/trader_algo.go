@@ -72,7 +72,7 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 
 			transactionAmount = t.state.assets
 
-			err := t.orderUC.CreateSpotMarketOrder(t.model.Symbol, "sell", transactionAmount)
+			err := t.orderUC.CreateSpotMarketOrder(t.model.Symbol, "sell", transactionAmount, nil, nil)
 			if err != nil {
 				t.log.Error("create order failed", zap.Error(err))
 			}
@@ -83,7 +83,10 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 
 			transactionAmount = t.state.cash / currentPrice
 
-			err := t.orderUC.CreateSpotMarketOrder(t.model.Symbol, "buy", transactionAmount)
+			stopLoss := currentPrice - atr*t.settings.StopLossMultiplier
+			takeProfit := currentPrice + atr*t.settings.TakeProfitMultiplier
+
+			err := t.orderUC.CreateSpotMarketOrder(t.model.Symbol, "buy", transactionAmount, &takeProfit, &stopLoss)
 			if err != nil {
 				t.log.Error("create order failed", zap.Error(err))
 			}

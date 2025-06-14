@@ -69,8 +69,8 @@ func main() {
 			return orderRepository.New(db)
 		}),
 
-		fx.Provide(func(repo order.Repository) order.Usecase {
-			return orderUsecase.New(repo)
+		fx.Provide(func(repo order.Repository, log *zap.Logger) order.Usecase {
+			return orderUsecase.New(repo, log)
 		}),
 
 		// Modules

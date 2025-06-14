@@ -3,6 +3,7 @@ package usecase
 import (
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/order"
+	"context"
 	"go.uber.org/zap"
 )
 
@@ -19,6 +20,8 @@ func New(repo order.Repository, log *zap.Logger) order.Usecase {
 	}
 }
 
-func (u *usecase) SetExchange(ex exchange.Exchange) {
+func (u *usecase) Init(ex exchange.Exchange) {
 	u.ex = ex
+
+	go u.SyncOrders(context.Background())
 }

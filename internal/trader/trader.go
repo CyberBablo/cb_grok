@@ -88,7 +88,7 @@ func (t *trader) Setup(params TraderParams) {
 	t.strategy = params.Strategy
 
 	t.exch = params.Exchange
-	t.orderUC.SetExchange(params.Exchange)
+	t.orderUC.Init(params.Exchange)
 
 	t.state = t.initState(params.InitialCapital)
 	if params.Settings != nil {

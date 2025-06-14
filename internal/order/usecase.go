@@ -7,10 +7,9 @@ import (
 
 // Usecase interface definition
 type Usecase interface {
-	SetExchange(ex exchange.Exchange)
+	Init(ex exchange.Exchange)
 
-	CreateSpotMarketOrder(symbol string, side exchange.OrderSide, quoteQty float64) error
-	UpdateOrderStatus(ctx context.Context, orderID int64, statusID int32) error
+	CreateSpotMarketOrder(symbol string, side exchange.OrderSide, quoteQty float64, takeProfit *float64, stopLoss *float64) error
 	SyncOrders(ctx context.Context)
 	GetActiveOrders(ctx context.Context) ([]Order, error)
 }

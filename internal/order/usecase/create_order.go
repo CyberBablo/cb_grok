@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func (u *usecase) CreateSpotMarketOrder(symbol string, side exchange.OrderSide, quoteQty float64) error {
+func (u *usecase) CreateSpotMarketOrder(symbol string, side exchange.OrderSide, quoteQty float64, takeProfit *float64, stopLoss *float64) error {
 	if u.ex == nil {
 		return errors.New("exchange not set")
 	}
@@ -27,23 +27,25 @@ func (u *usecase) CreateSpotMarketOrder(symbol string, side exchange.OrderSide, 
 
 	// Insert order into database
 	ord := &order.Order{
-		ExchangeID: exch.ID,
-		ProductID:  order.OrderProductSpot,
-		TypeID:     order.OrderTypeMarket,
-		SideID:     sideId,
-		StatusID:   order.OrderStatusNew,
-		BaseQty:    nil,
-		QuoteQty:   lo.ToPtr(quoteQty),
-		ExtID:      "",
-		CreatedAt:  time.Now(),
-		UpdatedAt:  nil,
+		ExchangeID:      exch.ID,
+		ProductID:       order.OrderProductSpot,
+		TypeID:          order.OrderTypeMarket,
+		SideID:          sideId,
+		StatusID:        order.OrderStatusNew,
+		BaseQty:         nil,
+		QuoteQty:        lo.ToPtr(quoteQty),
+		ExtID:           "",
+		CreatedAt:       time.Now(),
+		UpdatedAt:       nil,
+		TakeProfitPrice: takeProfit,
+		StopLossPrice:   stopLoss,
 	}
 	err = u.repo.InsertOrder(ord)
 	if err != nil {
 		return err
 	}
 
-	orderId, err := u.ex.PlaceSpotMarketOrder(symbol, side, quoteQty)
+	orderId, err := u.ex.PlaceSpotMarketOrder(symbol, side, quoteQty, takeProfit, stopLoss)
 	if err != nil {
 		u.log.Error("create order failed", zap.Error(err))
 		return err

@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"go.uber.org/zap"
 	"time"
 )
 
@@ -26,12 +27,18 @@ func (u *usecase) SyncOrders(ctx context.Context) {
 			}
 
 			for _, order := range orders {
-				_ = order
-				// TODO: Implement exchange API call to check order status
-				// exchangeStatus := exchangeClient.GetOrderStatus(order.ID)
-				// if exchangeStatus != order.StatusID {
-				//     u.repo.UpdateOrderStatus(order.ID, exchangeStatus)
-				// }
+				exchangeStatus, err := u.ex.GetOrderInfo(order.ExtID)
+				if err != nil {
+					u.log.Error("failed to get order info", zap.String("order_id", order.ExtID), zap.Error(err))
+					continue
+				}
+				if int(exchangeStatus) != order.StatusID {
+					err := u.repo.UpdateOrderStatus(order.ID, int(exchangeStatus))
+					if err != nil {
+						u.log.Error("failed to update order status", zap.String("order_id", order.ExtID), zap.Error(err))
+						continue
+					}
+				}
 			}
 		}
 	}

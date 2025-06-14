@@ -2,6 +2,7 @@ package bybit
 
 import (
 	"cb_grok/internal/exchange"
+	"cb_grok/internal/order"
 	"fmt"
 	bybitapi "github.com/bybit-exchange/bybit.go.api"
 )
@@ -51,4 +52,17 @@ func ParseResponse(response *bybitapi.ServerResponse) (map[string]interface{}, e
 	}
 
 	return response.Result.(map[string]interface{}), nil
+}
+
+func ParseOrderStatus(status string) (order.OrderStatus, error) {
+	switch status {
+	case "New", "PartiallyFilled":
+		return order.OrderStatusPlaced, nil
+	case "Filled":
+		return order.OrderStatusFilled, nil
+	case "Cancelled", "Rejected", "Deactivated":
+		return order.OrderStatusCanceled, nil
+	default:
+		return 0, fmt.Errorf("unknown order status: %s", status)
+	}
 }

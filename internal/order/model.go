@@ -6,17 +6,19 @@ import (
 
 // Order represents the order table
 type Order struct {
-	ID         int64      `db:"id"`
-	ExchangeID int        `db:"exch_id"`
-	ProductID  int        `db:"prod_id"`
-	TypeID     int        `db:"type_id"`
-	SideID     int        `db:"side_id"`
-	StatusID   int        `db:"status_id"`
-	BaseQty    *float64   `db:"base_qty"`
-	QuoteQty   *float64   `db:"quote_qty"`
-	ExtID      string     `db:"ext_id"`
-	CreatedAt  time.Time  `db:"created_at"`
-	UpdatedAt  *time.Time `db:"updated_at"`
+	ID              int64      `db:"id"`
+	ExchangeID      int        `db:"exch_id"`
+	ProductID       int        `db:"prod_id"`
+	TypeID          int        `db:"type_id"`
+	SideID          int        `db:"side_id"`
+	StatusID        int        `db:"status_id"`
+	BaseQty         *float64   `db:"base_qty"`
+	QuoteQty        *float64   `db:"quote_qty"`
+	ExtID           string     `db:"ext_id"`
+	CreatedAt       time.Time  `db:"created_at"`
+	UpdatedAt       *time.Time `db:"updated_at"`
+	TakeProfitPrice *float64   `db:"tp_price"`
+	StopLossPrice   *float64   `db:"sl_price"`
 }
 
 // Exchange represents the exchange table
@@ -25,11 +27,13 @@ type Exchange struct {
 	Name string `db:"name"`
 }
 
+type OrderStatus int
+
 const (
-	OrderStatusNew      int = 1
-	OrderStatusPlaced   int = 2
-	OrderStatusFilled   int = 3
-	OrderStatusCanceled int = 4
+	OrderStatusNew      OrderStatus = 1
+	OrderStatusPlaced   OrderStatus = 2
+	OrderStatusFilled   OrderStatus = 3
+	OrderStatusCanceled OrderStatus = 4
 )
 
 const (
