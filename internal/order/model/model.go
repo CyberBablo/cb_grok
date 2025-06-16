@@ -1,4 +1,4 @@
-package order
+package order_model
 
 import (
 	"time"
@@ -7,8 +7,8 @@ import (
 // Order represents the order table
 type Order struct {
 	ID              int64      `db:"id"`
+	SymbolID        int        `db:"symbol_id"`
 	ExchangeID      int        `db:"exch_id"`
-	ProductID       int        `db:"prod_id"`
 	TypeID          int        `db:"type_id"`
 	SideID          int        `db:"side_id"`
 	StatusID        int        `db:"status_id"`
@@ -25,6 +25,13 @@ type Order struct {
 type Exchange struct {
 	ID   int    `db:"id"`
 	Name string `db:"name"`
+}
+
+type Symbol struct {
+	ID    int    `db:"id"`
+	Code  string `db:"code"`
+	Base  string `db:"base"`
+	Quote string `db:"quote"`
 }
 
 type OrderStatus int

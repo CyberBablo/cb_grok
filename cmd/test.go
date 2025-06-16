@@ -11,6 +11,6 @@ func main() {
 
 		return nil
 	})
-	_, _ = ws.Connect().SendSubscription([]string{"kline.60.BNBUSDT"})
+	_, _ = ws.Connect().SendSubscription([]string{"kline.15.BTCUSDT"})
 	select {}
 }

@@ -1,17 +1,18 @@
 package bybit
 
 import (
-	"cb_grok/internal/order"
+	"cb_grok/internal/order/model"
 	"context"
 	"encoding/json"
 	"fmt"
+	"go.uber.org/zap"
 )
 
-func (b *bybit) GetOrderInfo(orderId string) (order.OrderStatus, error) {
+func (b *bybit) GetOrderInfo(orderId string) (order_model.OrderStatus, error) {
 	params := map[string]interface{}{"orderId": orderId, "category": "spot"}
 	response, err := b.client.NewUtaBybitServiceWithParams(params).GetOpenOrders(context.Background())
 	if err != nil {
-		fmt.Println(err)
+		b.logger.Error("failed to get order info", zap.String("orderId", orderId), zap.Error(err))
 		return 0, err
 	}
 
@@ -20,7 +21,7 @@ func (b *bybit) GetOrderInfo(orderId string) (order.OrderStatus, error) {
 		return 0, err
 	}
 
-	var orderList OrderListResult
+	var orderList OrderList
 	resultBytes, err := json.Marshal(result)
 	if err != nil {
 		return 0, fmt.Errorf("failed to marshal response: %w", err)

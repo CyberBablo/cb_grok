@@ -2,14 +2,14 @@ package usecase
 
 import (
 	"cb_grok/internal/exchange"
-	"cb_grok/internal/order"
+	"cb_grok/internal/order/model"
 	"errors"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 	"time"
 )
 
-func (u *usecase) CreateSpotMarketOrder(symbol string, side exchange.OrderSide, quoteQty float64, takeProfit *float64, stopLoss *float64) error {
+func (u *usecase) CreateSpotMarketOrder(symbol string, side exchange.OrderSide, baseQty float64, takeProfit *float64, stopLoss *float64) error {
 	if u.ex == nil {
 		return errors.New("exchange not set")
 	}
@@ -25,15 +25,21 @@ func (u *usecase) CreateSpotMarketOrder(symbol string, side exchange.OrderSide, 
 		sideId = 2
 	}
 
+	symbolValue, err := u.repo.GetSymbolByCode(symbol)
+	if err != nil {
+		u.log.Error("failed to get symbol by code", zap.Error(err))
+		return err
+	}
+
 	// Insert order into database
-	ord := &order.Order{
+	ord := &order_model.Order{
 		ExchangeID:      exch.ID,
-		ProductID:       order.OrderProductSpot,
-		TypeID:          order.OrderTypeMarket,
+		SymbolID:        symbolValue.ID,
+		TypeID:          order_model.OrderTypeMarket,
 		SideID:          sideId,
-		StatusID:        order.OrderStatusNew,
-		BaseQty:         nil,
-		QuoteQty:        lo.ToPtr(quoteQty),
+		StatusID:        int(order_model.OrderStatusNew),
+		BaseQty:         lo.ToPtr(baseQty),
+		QuoteQty:        nil,
 		ExtID:           "",
 		CreatedAt:       time.Now(),
 		UpdatedAt:       nil,
@@ -45,7 +51,7 @@ func (u *usecase) CreateSpotMarketOrder(symbol string, side exchange.OrderSide, 
 		return err
 	}
 
-	orderId, err := u.ex.PlaceSpotMarketOrder(symbol, side, quoteQty, takeProfit, stopLoss)
+	orderId, err := u.ex.PlaceSpotMarketOrder(symbol, side, baseQty, takeProfit, stopLoss)
 	if err != nil {
 		u.log.Error("create order failed", zap.Error(err))
 		return err

@@ -3,6 +3,7 @@ package strategy
 import (
 	"cb_grok/internal/indicators"
 	"cb_grok/pkg/models"
+	"go.uber.org/zap"
 	"math"
 )
 
@@ -13,7 +14,9 @@ func NewLinearBiasStrategy() Strategy {
 }
 
 func (s *LinearBiasStrategy) ApplyIndicators(candles []models.OHLCV, params StrategyParams) []models.AppliedOHLCV {
-	if len(candles) < max(params.MALongPeriod, params.EMALongPeriod, params.MACDLongPeriod, params.BollingerPeriod, params.StochasticKPeriod) {
+	requiredCandles := max(params.MALongPeriod, params.EMALongPeriod, params.MACDLongPeriod, params.BollingerPeriod, params.StochasticKPeriod)
+	if len(candles) < requiredCandles {
+		zap.S().Infof("strategy: required candles: %d", requiredCandles)
 		return nil
 	}
 

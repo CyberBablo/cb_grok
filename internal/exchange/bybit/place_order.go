@@ -7,15 +7,15 @@ import (
 	"strconv"
 )
 
-func (b *bybit) PlaceSpotMarketOrder(symbol string, orderSide exchange.OrderSide, quoteQty float64, takeProfit *float64, stopLoss *float64) (string, error) {
+func (b *bybit) PlaceSpotMarketOrder(symbol string, orderSide exchange.OrderSide, baseQty float64, takeProfit *float64, stopLoss *float64) (string, error) {
 	orderSideValue := GetBybitOrderSide(orderSide)
 	if orderSideValue == "" {
 		return "", fmt.Errorf("unsupported order side: %s", orderSide)
 	}
 
-	quoteQtyValue := strconv.FormatFloat(quoteQty, 'f', -1, 64)
+	qty := strconv.FormatFloat(baseQty, 'f', -1, 64)
 
-	req := b.client.NewPlaceOrderService("spot", symbol, orderSideValue, "Market", quoteQtyValue).MarketUnit("quoteCoin")
+	req := b.client.NewPlaceOrderService("spot", symbol, orderSideValue, "Market", qty)
 
 	if takeProfit != nil {
 		req.TakeProfit(fmt.Sprintf("%.2f", *takeProfit))

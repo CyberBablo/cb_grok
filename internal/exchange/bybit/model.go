@@ -20,7 +20,7 @@ type WSKlineMessage struct {
 	Ts int64 `json:"ts,omitempty"`
 }
 
-type OrderListResult struct {
+type OrderList struct {
 	List []Order `json:"list,omitempty"`
 }
 
@@ -39,4 +39,43 @@ type Order struct {
 	StopLoss     string `json:"stopLoss"`
 	CreatedTime  string `json:"createdTime"`
 	UpdatedTime  string `json:"updatedTime"`
+}
+
+type WalletBalanceList struct {
+	List []WalletBalance `json:"list"`
+}
+
+type WalletBalance struct {
+	TotalEquity            string        `json:"totalEquity"`
+	AccountIMRate          string        `json:"accountIMRate"`
+	TotalMarginBalance     string        `json:"totalMarginBalance"`
+	TotalInitialMargin     string        `json:"totalInitialMargin"`
+	AccountType            string        `json:"accountType"`
+	TotalAvailableBalance  string        `json:"totalAvailableBalance"`
+	AccountMMRate          string        `json:"accountMMRate"`
+	TotalPerpUPL           string        `json:"totalPerpUPL"`
+	TotalWalletBalance     string        `json:"totalWalletBalance"`
+	AccountLTV             string        `json:"accountLTV"`
+	TotalMaintenanceMargin string        `json:"totalMaintenanceMargin"`
+	Coin                   []CoinBalance `json:"coin"`
+}
+
+type CoinBalance struct {
+	AvailableToBorrow   string `json:"availableToBorrow"`
+	Bonus               string `json:"bonus"`
+	AccruedInterest     string `json:"accruedInterest"`
+	AvailableToWithdraw string `json:"availableToWithdraw"`
+	TotalOrderIM        string `json:"totalOrderIM"`
+	Equity              string `json:"equity"`
+	TotalPositionMM     string `json:"totalPositionMM"`
+	UsdValue            string `json:"usdValue"`
+	SpotHedgingQty      string `json:"spotHedgingQty"`
+	UnrealisedPnl       string `json:"unrealisedPnl"`
+	BorrowAmount        string `json:"borrowAmount"`
+	TotalPositionIM     string `json:"totalPositionIM"`
+	WalletBalance       string `json:"walletBalance"`
+	CumRealisedPnl      string `json:"cumRealisedPnl"`
+	Locked              string `json:"locked"`
+	Free                string `json:"free"`
+	Coin                string `json:"coin"`
 }

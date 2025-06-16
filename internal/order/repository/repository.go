@@ -2,6 +2,7 @@ package repository
 
 import (
 	"cb_grok/internal/order"
+	order_model "cb_grok/internal/order/model"
 	"cb_grok/pkg/postgres"
 	"errors"
 	"fmt"
@@ -17,18 +18,18 @@ func New(db postgres.Postgres) order.Repository {
 	}
 }
 
-func (r *repo) InsertOrder(order *order.Order) error {
+func (r *repo) InsertOrder(order *order_model.Order) error {
 	query := `
 		INSERT INTO public.order (
-			exch_id, prod_id, type_id, side_id, status_id, 
+			symbol_id, exch_id, type_id, side_id, status_id, 
 			base_qty, quote_qty, ext_id, created_at, updated_at, tp_price, sl_price
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING id
 	`
 	var id int64
 	err := r.db.Get(&id, query,
+		order.SymbolID,
 		order.ExchangeID,
-		order.ProductID,
 		order.TypeID,
 		order.SideID,
 		order.StatusID,
@@ -65,11 +66,11 @@ func (r *repo) UpdateOrderStatus(orderID int64, statusID int) error {
 	return nil
 }
 
-func (r *repo) GetActiveOrders() ([]order.Order, error) {
-	var orders []order.Order
+func (r *repo) GetActiveOrders() ([]order_model.Order, error) {
+	var orders []order_model.Order
 	query := `
-		SELECT o.id, o.exch_id, o.prod_id, o.type_id, o.side_id, o.status_id,
-			o.base_qty, o.quote_qty, o.ext_id, o.created_at, o.updated_at, tp_price, sl_price
+		SELECT o.id, o.symbol_id, o.exch_id, o.type_id, o.side_id, o.status_id,
+			o.base_qty, o.quote_qty, o.ext_id, o.created_at, o.updated_at, o.tp_price, o.sl_price
 		FROM public.order o
 		JOIN public.order_status os ON o.status_id = os.id
 		WHERE os.code IN ('new', 'placed')
@@ -81,8 +82,26 @@ func (r *repo) GetActiveOrders() ([]order.Order, error) {
 	return orders, nil
 }
 
-func (r *repo) GetExchangeByName(name string) (*order.Exchange, error) {
-	var result []order.Exchange
+func (r *repo) GetLastOrder() (*order_model.Order, error) {
+	var orders []order_model.Order
+	query := `
+		SELECT o.id, o.symbol_id, o.exch_id, o.type_id, o.side_id, o.status_id,
+			o.base_qty, o.quote_qty, o.ext_id, o.created_at, o.updated_at, o.tp_price, o.sl_price
+		FROM public.order o	ORDER BY o.id desc LIMIT 1
+	`
+	err := r.db.Select(&orders, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get active orders: %w", err)
+	}
+	if len(orders) == 0 {
+		return nil, nil
+	}
+
+	return &orders[0], nil
+}
+
+func (r *repo) GetExchangeByName(name string) (*order_model.Exchange, error) {
+	var result []order_model.Exchange
 	query := `
 		SELECT id, name 
 		FROM public.exchange 
@@ -114,4 +133,21 @@ func (r *repo) UpdateOrderExtID(orderID int64, extID string) error {
 		return errors.New("order not found")
 	}
 	return nil
+}
+
+func (r *repo) GetSymbolByCode(code string) (*order_model.Symbol, error) {
+	var result []order_model.Symbol
+	query := `
+		SELECT id, code, base, quote 
+		FROM public.symbol 
+		WHERE code = $1
+	`
+	err := r.db.Select(&result, query, code)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get symbol by code: %w", err)
+	}
+	if len(result) == 0 {
+		return nil, errors.New("symbol not found")
+	}
+	return &result[0], nil
 }

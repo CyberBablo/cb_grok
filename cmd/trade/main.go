@@ -89,7 +89,7 @@ func main() {
 	app.Run()
 }
 
-func runTrade(log *zap.Logger, tg *telegram.TelegramService, cfg *config.Config) error {
+func runTrade(log *zap.Logger, tg *telegram.TelegramService, cfg *config.Config, orderUC order.Usecase) error {
 	var (
 		modelFilename string
 		tradingMode   string
@@ -120,7 +120,7 @@ func runTrade(log *zap.Logger, tg *telegram.TelegramService, cfg *config.Config)
 		return fmt.Errorf("failed to initialize exchange: %w", err)
 	}
 
-	trade := trader.NewTrader(log, tg)
+	trade := trader.NewTrader(log, tg, orderUC)
 
 	trade.Setup(trader.TraderParams{
 		Model:          mod,
@@ -140,7 +140,7 @@ func runTrade(log *zap.Logger, tg *telegram.TelegramService, cfg *config.Config)
 		M (month)
 	*/
 	if tradingMode == "demo" {
-		err = trade.Run(trader.ModeLiveDemo, "60")
+		err = trade.Run(trader.ModeLiveDemo, "1")
 	} else {
 		err = trade.RunSimulation(trader.ModeSimulation)
 	}
@@ -156,6 +156,7 @@ func registerLifecycleHooks(
 	lifecycle fx.Lifecycle,
 	log *zap.Logger,
 	cfg *config.Config,
+	orderUC order.Usecase,
 	tg *telegram.TelegramService,
 	shutdowner fx.Shutdowner,
 ) {
@@ -168,7 +169,7 @@ func registerLifecycleHooks(
 
 			exitCode := 0
 			go func() {
-				err := runTrade(log, tg, cfg)
+				err := runTrade(log, tg, cfg, orderUC)
 				if err != nil {
 					log.Error("Failed to run optimize", zap.Error(err))
 					exitCode = 1

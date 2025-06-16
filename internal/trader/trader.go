@@ -74,11 +74,12 @@ type trader struct {
 	log *zap.Logger
 }
 
-func NewTrader(log *zap.Logger, tg *telegram.TelegramService) Trader {
+func NewTrader(log *zap.Logger, tg *telegram.TelegramService, orderUC order.Usecase) Trader {
 	return &trader{
 		log:      log,
 		tg:       tg,
 		settings: &defaultSettings,
+		orderUC:  orderUC,
 	}
 }
 

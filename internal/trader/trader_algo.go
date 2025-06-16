@@ -1,9 +1,11 @@
 package trader
 
 import (
+	order_model "cb_grok/internal/order/model"
 	"cb_grok/pkg/models"
 	"context"
 	"encoding/json"
+	"fmt"
 	"go.uber.org/zap"
 	"strings"
 )
@@ -16,10 +18,11 @@ func (t *trader) processAlgo(candle models.OHLCV) (*Action, error) {
 	}
 
 	candleLog, _ := json.Marshal(candle)
-	t.log.Info("trader: new candle has been processed", zap.String("candle", string(candleLog)))
+	t.log.Info("trader: new candle has been processed", zap.Int("total_length", len(t.state.ohlcv)), zap.String("candle", string(candleLog)))
 
 	appliedOHLCV := t.strategy.ApplyIndicators(t.state.ohlcv, t.model.StrategyParams)
 	if appliedOHLCV == nil {
+		t.log.Info("trader: not enough candles in the dataset")
 		return nil, nil
 	}
 
@@ -49,7 +52,7 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 	currentSignal := currentCandle.Signal
 	currentPrice := currentCandle.Close
 
-	atr := currentCandle.ATR
+	t.log.Info("trader: processed signal", zap.Int("sig", currentSignal))
 
 	var (
 		decision        = DecisionHold
@@ -58,42 +61,77 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 
 	transactionAmount := 0.0
 
+	symbol, err := t.orderUC.GetSymbolByCode(t.model.Symbol)
+	if err != nil {
+		t.log.Error("failed to get symbol by code", zap.Error(err))
+		return nil, err
+	}
+
 	orders, err := t.orderUC.GetActiveOrders(context.Background())
 	if err != nil {
 		t.log.Error("failed to fetch active orders", zap.Error(err))
 		return nil, err
 	}
 
-	isPositionOpen := len(orders) > 0
+	if len(orders) > 1 {
+		t.log.Error("unexpected situation: there are more than 1 opened orders")
+		return nil, fmt.Errorf("unexpected situation: there are more than 1 opened orders")
+	}
 
-	if isPositionOpen {
+	lastOrder, err := t.orderUC.GetLastOrder()
+	if err != nil {
+		t.log.Error("failed to fetch last order", zap.Error(err))
+		return nil, err
+	}
+
+	allowSell := lastOrder != nil && lastOrder.SideID == int(order_model.OrderSideBuy) && lastOrder.StatusID == int(order_model.OrderStatusFilled)
+	allowBuy := lastOrder == nil || (lastOrder.SideID == int(order_model.OrderSideSell) && lastOrder.StatusID == int(order_model.OrderStatusFilled))
+
+	if allowBuy && allowSell {
+		t.log.Error("trade_algo: unexpected situation: allowed both buy and sell")
+		return nil, fmt.Errorf("trade_algo: unexpected situation: allowed both buy and sell")
+	}
+
+	if allowSell {
 		if currentSignal == -1 { // sell signal
+			bal, err := t.exch.GetAvailableSpotWalletBalance(symbol.Base)
+			if err != nil {
+				t.log.Error("failed to get available wallet balance", zap.Error(err))
+				return nil, err
+			}
+
 			decision = DecisionSell
 
-			transactionAmount = t.state.assets
+			transactionAmount = bal
 
-			err := t.orderUC.CreateSpotMarketOrder(t.model.Symbol, "sell", transactionAmount, nil, nil)
+			err = t.orderUC.CreateSpotMarketOrder(t.model.Symbol, "sell", transactionAmount, nil, nil)
 			if err != nil {
 				t.log.Error("create order failed", zap.Error(err))
 			}
 		}
-	} else {
+	} else if allowBuy {
 		if currentSignal == 1 { // buy signal
+			bal, err := t.exch.GetAvailableSpotWalletBalance(symbol.Quote)
+			if err != nil {
+				t.log.Error("failed to get available wallet balance", zap.Error(err))
+				return nil, err
+			}
+
 			decision = DecisionBuy
 
-			transactionAmount = t.state.cash / currentPrice
+			transactionAmount = bal / currentPrice
 
-			stopLoss := currentPrice - atr*t.settings.StopLossMultiplier
-			takeProfit := currentPrice + atr*t.settings.TakeProfitMultiplier
+			stopLoss := currentPrice - currentCandle.ATR*t.settings.StopLossMultiplier
+			takeProfit := currentPrice + currentCandle.ATR*t.settings.TakeProfitMultiplier
 
-			err := t.orderUC.CreateSpotMarketOrder(t.model.Symbol, "buy", transactionAmount, &takeProfit, &stopLoss)
+			err = t.orderUC.CreateSpotMarketOrder(t.model.Symbol, "buy", transactionAmount, &takeProfit, &stopLoss)
 			if err != nil {
 				t.log.Error("create order failed", zap.Error(err))
 			}
 		}
 	}
 
-	portfolioValue := t.state.cash + t.state.assets*currentPrice
+	portfolioValue := 0.0
 	t.state.portfolioValues = append(t.state.portfolioValues, PortfolioValue{
 		Timestamp: currentCandle.Timestamp,
 		Value:     portfolioValue,
