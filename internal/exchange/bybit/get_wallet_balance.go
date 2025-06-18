@@ -9,7 +9,7 @@ import (
 )
 
 func (b *bybit) GetAvailableSpotWalletBalance(coin string) (float64, error) {
-	params := map[string]interface{}{"accountType": "SPOT"}
+	params := map[string]interface{}{"accountType": "UNIFIED"}
 	response, err := b.client.NewUtaBybitServiceWithParams(params).GetAccountWallet(context.Background())
 	if err != nil {
 		b.logger.Error("failed to get wallet balance", zap.String("coin", coin), zap.Error(err))
@@ -37,7 +37,7 @@ func (b *bybit) GetAvailableSpotWalletBalance(coin string) (float64, error) {
 
 	for _, c := range walletList.List[0].Coin {
 		if c.Coin == coin {
-			bal, err := strconv.ParseFloat(c.Free, 64)
+			bal, err := strconv.ParseFloat(c.WalletBalance, 64)
 			if err != nil {
 				return 0, fmt.Errorf("failed to parse balance for coin %s: %w", coin, err)
 			}

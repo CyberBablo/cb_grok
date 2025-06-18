@@ -76,6 +76,5 @@ type CoinBalance struct {
 	WalletBalance       string `json:"walletBalance"`
 	CumRealisedPnl      string `json:"cumRealisedPnl"`
 	Locked              string `json:"locked"`
-	Free                string `json:"free"`
 	Coin                string `json:"coin"`
 }

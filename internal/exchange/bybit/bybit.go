@@ -17,6 +17,9 @@ func NewBybit(apiKey, apiSecret string, tradingMode exchange.TradingMode) (excha
 
 	switch tradingMode {
 	case exchange.TradingModeDemo:
+		if apiKey == "" || apiSecret == "" {
+			return nil, fmt.Errorf("API key and secret are required for demo mode")
+		}
 		clientOptions = append(clientOptions, bybitapi.WithBaseURL(bybitapi.DEMO_ENV), bybitapi.WithDebug(true))
 	case exchange.TradingModeTestnet:
 		clientOptions = append(clientOptions, bybitapi.WithBaseURL(bybitapi.TESTNET), bybitapi.WithDebug(true))
