@@ -5,15 +5,15 @@ datasources:
     type: postgres
     uid: DS_POSTGRESQL
     access: proxy
-    url: postgres:5432
-    database: grok_metrics
-    user: postgres
+    url: ${POSTGRES_HOST}:${POSTGRES_PORT}
+    database: ${POSTGRES_DB}
+    user: ${POSTGRES_USER}
     isDefault: true
     editable: true
     secureJsonData:
-      password: password
+      password: ${POSTGRES_PASSWORD}
     jsonData:
-      sslmode: 'disable'
+      sslmode: '${POSTGRES_SSLMODE}'
       maxOpenConns: 0
       maxIdleConns: 2
       connMaxLifetime: 14400
