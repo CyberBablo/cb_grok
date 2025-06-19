@@ -45,6 +45,7 @@ type Trader interface {
 	RunSimulation(mode TradeMode) error
 	BacktestAlgo(appliedOHLCV []models.AppliedOHLCV) (*Action, error)
 	GetState() State
+	SetMetricsCollector(collector MetricsCollector)
 }
 
 type State interface {
@@ -72,6 +73,14 @@ type trader struct {
 
 	tg  *telegram.TelegramService
 	log *zap.Logger
+
+	metricsCollector MetricsCollector
+}
+
+type MetricsCollector interface {
+	SaveTradeMetric(order Action, indicators map[string]float64) error
+	SaveIndicatorData(timestamp int64, indicators map[string]float64) error
+	Close() error
 }
 
 func NewTrader(log *zap.Logger, tg *telegram.TelegramService, orderUC order.Usecase) Trader {
@@ -95,6 +104,10 @@ func (t *trader) Setup(params TraderParams) {
 	if params.Settings != nil {
 		t.settings = params.Settings
 	}
+}
+
+func (t *trader) SetMetricsCollector(collector MetricsCollector) {
+	t.metricsCollector = collector
 }
 
 func (t *trader) GetState() State {
