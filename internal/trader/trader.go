@@ -2,6 +2,7 @@ package trader
 
 import (
 	"bytes"
+	"cb_grok/internal/candle"
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/model"
 	"cb_grok/internal/order"
@@ -69,7 +70,8 @@ type trader struct {
 	state    *state
 	settings *TraderSettings
 
-	orderUC order.Usecase
+	orderUC    order.Usecase
+	candleRepo candle.Repository
 
 	tg  *telegram.TelegramService
 	log *zap.Logger
@@ -83,12 +85,13 @@ type MetricsCollector interface {
 	Close() error
 }
 
-func NewTrader(log *zap.Logger, tg *telegram.TelegramService, orderUC order.Usecase) Trader {
+func NewTrader(log *zap.Logger, tg *telegram.TelegramService, orderUC order.Usecase, candleRepo candle.Repository) Trader {
 	return &trader{
-		log:      log,
-		tg:       tg,
-		settings: &defaultSettings,
-		orderUC:  orderUC,
+		log:        log,
+		tg:         tg,
+		settings:   &defaultSettings,
+		orderUC:    orderUC,
+		candleRepo: candleRepo,
 	}
 }
 

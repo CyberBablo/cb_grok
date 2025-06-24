@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"cb_grok/internal/exchange/bybit"
 	"cb_grok/pkg/models"
+	"context"
 	"encoding/json"
 	"fmt"
 	bybitapi "github.com/bybit-exchange/bybit.go.api"
@@ -70,6 +71,18 @@ func (t *trader) Run(mode TradeMode, timeframe string) error {
 			Low:       l,
 			Close:     c,
 			Volume:    v,
+		}
+
+		// Save candle to database if repository is available
+		if t.candleRepo != nil {
+			symbol := strings.ReplaceAll(t.model.Symbol, "/", "")
+			ctx := context.Background()
+			if err := t.candleRepo.Create(ctx, symbol, "bybit", timeframe, candle); err != nil {
+				t.log.Error("failed to save candle", zap.Error(err), 
+					zap.String("symbol", symbol),
+					zap.String("timeframe", timeframe),
+					zap.Int64("timestamp", candle.Timestamp))
+			}
 		}
 
 		action, err := t.processAlgo(candle)
@@ -144,6 +157,18 @@ func (t *trader) RunSimulation(mode TradeMode) error {
 		if err != nil {
 			t.log.Error("cannot parse ohlcv message", zap.Error(err))
 			continue
+		}
+
+		// Save candle to database if repository is available (simulation mode)
+		if t.candleRepo != nil {
+			symbol := strings.ReplaceAll(t.model.Symbol, "/", "")
+			ctx := context.Background()
+			// For simulation, we use "simulation" as exchange name
+			if err := t.candleRepo.Create(ctx, symbol, "simulation", "1m", candle); err != nil {
+				t.log.Error("failed to save candle", zap.Error(err), 
+					zap.String("symbol", symbol),
+					zap.Int64("timestamp", candle.Timestamp))
+			}
 		}
 
 		action, err := t.processAlgo(candle)
