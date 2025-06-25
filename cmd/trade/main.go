@@ -6,6 +6,7 @@ import (
 	candleRepository "cb_grok/internal/candle/repository"
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/exchange/bybit"
+	"cb_grok/internal/metrics"
 	"cb_grok/internal/model"
 	"cb_grok/internal/order"
 	orderRepository "cb_grok/internal/order/repository"
@@ -66,6 +67,22 @@ func main() {
 				PgDriver: cfg.Postgres.PgDriver,
 			})
 		}),
+		fx.Provide(
+			fx.Annotate(
+				func(cfg *config.Config) (postgres.Postgres, error) {
+					return postgres.InitPsqlDB(&postgres.Conn{
+						Host:     cfg.PostgresMetrics.Host,
+						Port:     cfg.PostgresMetrics.Port,
+						User:     cfg.PostgresMetrics.User,
+						Password: cfg.PostgresMetrics.Password,
+						DBName:   cfg.PostgresMetrics.DBName,
+						SSLMode:  cfg.PostgresMetrics.SSLMode,
+						PgDriver: cfg.PostgresMetrics.PgDriver,
+					})
+				},
+				fx.ResultTags(`name:"metrics"`),
+			),
+		),
 
 		fx.Provide(func(db postgres.Postgres) order.Repository {
 			return orderRepository.New(db)
@@ -84,7 +101,12 @@ func main() {
 		trader.Module,
 
 		// Lifecycle hooks
-		fx.Invoke(registerLifecycleHooks),
+		fx.Invoke(
+			fx.Annotate(
+				registerLifecycleHooks,
+				fx.ParamTags(``, ``, ``, ``, ``, ``, ``, `name:"metrics"`, ``),
+			),
+		),
 
 		// FX settings
 		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
@@ -95,7 +117,7 @@ func main() {
 	app.Run()
 }
 
-func runTrade(log *zap.Logger, tg *telegram.TelegramService, cfg *config.Config, orderUC order.Usecase, candleRepo candle.Repository) error {
+func runTrade(log *zap.Logger, tg *telegram.TelegramService, cfg *config.Config, orderUC order.Usecase, candleRepo candle.Repository, metricsDB postgres.Postgres) error {
 	var (
 		tradingMode string
 	)
@@ -133,6 +155,9 @@ func runTrade(log *zap.Logger, tg *telegram.TelegramService, cfg *config.Config,
 		Settings:       nil, // default
 		InitialCapital: 10000,
 	})
+	symbol := "BTCUSDT"
+	metricsCollector := metrics.NewDBMetricsCollector(trade.GetState(), metricsDB, symbol, log)
+	trade.SetMetricsCollector(metricsCollector)
 
 	/*
 		Available timeframes:
@@ -163,6 +188,8 @@ func registerLifecycleHooks(
 	orderUC order.Usecase,
 	candleRepo candle.Repository,
 	tg *telegram.TelegramService,
+	db postgres.Postgres,
+	metricsDB postgres.Postgres,
 	shutdowner fx.Shutdowner,
 ) {
 	lifecycle.Append(fx.Hook{
@@ -174,7 +201,7 @@ func registerLifecycleHooks(
 
 			exitCode := 0
 			go func() {
-				err := runTrade(log, tg, cfg, orderUC, candleRepo)
+				err := runTrade(log, tg, cfg, orderUC, candleRepo, metricsDB)
 				if err != nil {
 					log.Error("Failed to run optimize", zap.Error(err))
 					exitCode = 1

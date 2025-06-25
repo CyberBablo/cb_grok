@@ -185,29 +185,27 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 		}
 
 		t.state.orders = append(t.state.orders, action)
-		if t.metricsCollector != nil {
-			indicators := map[string]float64{
-				"RSI":         currentCandle.RSI,
-				"ATR":         currentCandle.ATR,
-				"MACD":        currentCandle.MACD,
-				"ADX":         currentCandle.ADX,
-				"StochasticK": currentCandle.StochasticK,
-				"StochasticD": currentCandle.StochasticD,
-				"ShortMA":     currentCandle.ShortMA,
-				"LongMA":      currentCandle.LongMA,
-				"ShortEMA":    currentCandle.ShortEMA,
-				"LongEMA":     currentCandle.LongEMA,
-				"UpperBB":     currentCandle.UpperBB,
-				"LowerBB":     currentCandle.LowerBB,
-			}
+		indicators := map[string]float64{
+			"RSI":         currentCandle.RSI,
+			"ATR":         currentCandle.ATR,
+			"MACD":        currentCandle.MACD,
+			"ADX":         currentCandle.ADX,
+			"StochasticK": currentCandle.StochasticK,
+			"StochasticD": currentCandle.StochasticD,
+			"ShortMA":     currentCandle.ShortMA,
+			"LongMA":      currentCandle.LongMA,
+			"ShortEMA":    currentCandle.ShortEMA,
+			"LongEMA":     currentCandle.LongEMA,
+			"UpperBB":     currentCandle.UpperBB,
+			"LowerBB":     currentCandle.LowerBB,
+		}
 
-			if err := t.metricsCollector.SaveIndicatorData(currentCandle.Timestamp, indicators); err != nil {
-				t.log.Error("Failed to save indicator data", zap.Error(err))
-			}
+		if err := t.metricsCollector.SaveIndicatorData(currentCandle.Timestamp, indicators); err != nil {
+			t.log.Error("Failed to save indicator data", zap.Error(err))
+		}
 
-			if err := t.metricsCollector.SaveTradeMetric(action, indicators); err != nil {
-				t.log.Error("Failed to save trade metric", zap.Error(err))
-			}
+		if err := t.metricsCollector.SaveTradeMetric(action, indicators); err != nil {
+			t.log.Error("Failed to save trade metric", zap.Error(err))
 		}
 	}
 
