@@ -2,6 +2,8 @@ package main
 
 import (
 	"cb_grok/config"
+	"cb_grok/internal/candle"
+	candleRepository "cb_grok/internal/candle/repository"
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/exchange/bybit"
 	"cb_grok/internal/model"
@@ -73,6 +75,10 @@ func main() {
 			return orderUsecase.New(repo, log)
 		}),
 
+		fx.Provide(func(db postgres.Postgres) candle.Repository {
+			return candleRepository.New(db)
+		}),
+
 		// Modules
 		telegram.Module,
 		trader.Module,
@@ -89,7 +95,7 @@ func main() {
 	app.Run()
 }
 
-func runTrade(log *zap.Logger, tg *telegram.TelegramService, cfg *config.Config, orderUC order.Usecase) error {
+func runTrade(log *zap.Logger, tg *telegram.TelegramService, cfg *config.Config, orderUC order.Usecase, candleRepo candle.Repository) error {
 	var (
 		modelFilename string
 		tradingMode   string
@@ -120,7 +126,7 @@ func runTrade(log *zap.Logger, tg *telegram.TelegramService, cfg *config.Config,
 		return fmt.Errorf("failed to initialize exchange: %w", err)
 	}
 
-	trade := trader.NewTrader(log, tg, orderUC)
+	trade := trader.NewTrader(log, tg, orderUC, candleRepo)
 
 	trade.Setup(trader.TraderParams{
 		Model:          mod,
@@ -157,6 +163,7 @@ func registerLifecycleHooks(
 	log *zap.Logger,
 	cfg *config.Config,
 	orderUC order.Usecase,
+	candleRepo candle.Repository,
 	tg *telegram.TelegramService,
 	shutdowner fx.Shutdowner,
 ) {
@@ -169,7 +176,7 @@ func registerLifecycleHooks(
 
 			exitCode := 0
 			go func() {
-				err := runTrade(log, tg, cfg, orderUC)
+				err := runTrade(log, tg, cfg, orderUC, candleRepo)
 				if err != nil {
 					log.Error("Failed to run optimize", zap.Error(err))
 					exitCode = 1

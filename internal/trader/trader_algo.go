@@ -171,7 +171,44 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 	}
 
 	if action.Decision != DecisionHold {
+		// Calculate profit for sell orders
+		if action.Decision == DecisionSell && len(t.state.orders) > 0 {
+			// Find the last buy order
+			for i := len(t.state.orders) - 1; i >= 0; i-- {
+				if t.state.orders[i].Decision == DecisionBuy {
+					buyPrice := t.state.orders[i].Price
+					sellPrice := action.Price
+					action.Profit = (sellPrice - buyPrice) * action.AssetAmount
+					break
+				}
+			}
+		}
+
 		t.state.orders = append(t.state.orders, action)
+		if t.metricsCollector != nil {
+			indicators := map[string]float64{
+				"RSI":         currentCandle.RSI,
+				"ATR":         currentCandle.ATR,
+				"MACD":        currentCandle.MACD,
+				"ADX":         currentCandle.ADX,
+				"StochasticK": currentCandle.StochasticK,
+				"StochasticD": currentCandle.StochasticD,
+				"ShortMA":     currentCandle.ShortMA,
+				"LongMA":      currentCandle.LongMA,
+				"ShortEMA":    currentCandle.ShortEMA,
+				"LongEMA":     currentCandle.LongEMA,
+				"UpperBB":     currentCandle.UpperBB,
+				"LowerBB":     currentCandle.LowerBB,
+			}
+
+			if err := t.metricsCollector.SaveIndicatorData(currentCandle.Timestamp, indicators); err != nil {
+				t.log.Error("Failed to save indicator data", zap.Error(err))
+			}
+
+			if err := t.metricsCollector.SaveTradeMetric(action, indicators); err != nil {
+				t.log.Error("Failed to save trade metric", zap.Error(err))
+			}
+		}
 	}
 
 	return &action, nil

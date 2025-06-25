@@ -45,6 +45,7 @@ type Action struct {
 	AssetAmount     float64
 	AssetCurrency   string
 	Comment         string
+	Profit          float64
 
 	PortfolioValue float64
 }

@@ -2,6 +2,7 @@ package trader
 
 import (
 	"bytes"
+	"cb_grok/internal/candle"
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/model"
 	"cb_grok/internal/order"
@@ -45,6 +46,7 @@ type Trader interface {
 	RunSimulation(mode TradeMode) error
 	BacktestAlgo(appliedOHLCV []models.AppliedOHLCV) (*Action, error)
 	GetState() State
+	SetMetricsCollector(collector MetricsCollector)
 }
 
 type State interface {
@@ -68,18 +70,28 @@ type trader struct {
 	state    *state
 	settings *TraderSettings
 
-	orderUC order.Usecase
+	orderUC    order.Usecase
+	candleRepo candle.Repository
 
 	tg  *telegram.TelegramService
 	log *zap.Logger
+
+	metricsCollector MetricsCollector
 }
 
-func NewTrader(log *zap.Logger, tg *telegram.TelegramService, orderUC order.Usecase) Trader {
+type MetricsCollector interface {
+	SaveTradeMetric(order Action, indicators map[string]float64) error
+	SaveIndicatorData(timestamp int64, indicators map[string]float64) error
+	Close() error
+}
+
+func NewTrader(log *zap.Logger, tg *telegram.TelegramService, orderUC order.Usecase, candleRepo candle.Repository) Trader {
 	return &trader{
-		log:      log,
-		tg:       tg,
-		settings: &defaultSettings,
-		orderUC:  orderUC,
+		log:        log,
+		tg:         tg,
+		settings:   &defaultSettings,
+		orderUC:    orderUC,
+		candleRepo: candleRepo,
 	}
 }
 
@@ -95,6 +107,10 @@ func (t *trader) Setup(params TraderParams) {
 	if params.Settings != nil {
 		t.settings = params.Settings
 	}
+}
+
+func (t *trader) SetMetricsCollector(collector MetricsCollector) {
+	t.metricsCollector = collector
 }
 
 func (t *trader) GetState() State {
