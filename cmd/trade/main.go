@@ -97,14 +97,12 @@ func main() {
 
 func runTrade(log *zap.Logger, tg *telegram.TelegramService, cfg *config.Config, orderUC order.Usecase, candleRepo candle.Repository) error {
 	var (
-		modelFilename string
-		tradingMode   string
+		tradingMode string
 	)
-	flag.StringVar(&modelFilename, "model", "", "Model filename")
 	flag.StringVar(&tradingMode, "trading_mode", "simulation", "Trading mode (simulation, demo, live). Default: simulation")
 	flag.Parse()
 
-	mod, err := model.Load(modelFilename)
+	mod, err := model.Load(cfg.DemoTrading.Model)
 	if err != nil {
 		log.Error("Failed to load model params", zap.Error(err))
 		return fmt.Errorf("error to load model: %w", err)

@@ -39,6 +39,21 @@ services:
     networks:
       - cb_grok_network
 
+  demo_trader:
+    container_name: cb_grok_demo_trader
+    build:
+      context: .
+      dockerfile: Dockerfile_demotrade
+    environment:
+      - CONFIG_PATH=./config/config.yaml
+    volumes:
+      - ./config/config.yaml:/config/config.yaml
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    networks:
+      - cb_grok_network
+
 volumes:
   postgres_data:
   grafana_data:

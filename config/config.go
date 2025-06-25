@@ -7,6 +7,11 @@ type Config struct {
 	Bybit           BybitConfig           `yaml:"bybit"`
 	Postgres        PostgresConfig        `yaml:"postgres"`
 	PostgresMetrics PostgresMetricsConfig `yaml:"postgres_metrics"`
+	DemoTrading     DemoTrading           `yaml:"demo_trading"`
+}
+
+type DemoTrading struct {
+	Model string `json:"model"`
 }
 
 type AppConfig struct {

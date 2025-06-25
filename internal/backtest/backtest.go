@@ -1,8 +1,10 @@
 package backtest
 
 import (
+	"cb_grok/internal/candle"
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/model"
+	"cb_grok/internal/order"
 	"cb_grok/internal/strategy"
 	"cb_grok/internal/telegram"
 	"cb_grok/internal/trader"
@@ -26,9 +28,12 @@ type backtest struct {
 
 	tg  *telegram.TelegramService
 	log *zap.Logger
+
+	orderUC    order.Usecase
+	candleRepo candle.Repository
 }
 
-func NewBacktest(log *zap.Logger, tg *telegram.TelegramService) Backtest {
+func NewBacktest(log *zap.Logger, tg *telegram.TelegramService, orderUC order.Usecase, candleRepo candle.Repository) Backtest {
 	return &backtest{
 		InitialCapital:       10000.0,
 		Commission:           0.001,  // 0.1%
@@ -37,15 +42,17 @@ func NewBacktest(log *zap.Logger, tg *telegram.TelegramService) Backtest {
 		StopLossMultiplier:   5,
 		TakeProfitMultiplier: 30,
 
-		tg:  tg,
-		log: log,
+		tg:         tg,
+		log:        log,
+		orderUC:    orderUC,
+		candleRepo: candleRepo,
 	}
 }
 
 func (b *backtest) Run(ohlcv []models.OHLCV, mod *model.Model) (*BacktestResult, error) {
 	str := strategy.NewLinearBiasStrategy()
 
-	trade := trader.NewTrader(b.log, b.tg)
+	trade := trader.NewTrader(b.log, b.tg, b.orderUC, b.candleRepo)
 	trade.Setup(trader.TraderParams{
 		Model:    mod,
 		Exchange: exchange.NewMockExchange(),
