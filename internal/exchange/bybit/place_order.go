@@ -12,7 +12,7 @@ func (b *bybit) PlaceSpotMarketOrder(symbol string, orderSide exchange.OrderSide
 		return "", fmt.Errorf("unsupported order side: %s", orderSide)
 	}
 
-	qty := fmt.Sprintf("%.6f", *takeProfit)
+	qty := fmt.Sprintf("%.6f", baseQty)
 
 	req := b.client.NewPlaceOrderService("spot", symbol, orderSideValue, "Market", qty)
 
