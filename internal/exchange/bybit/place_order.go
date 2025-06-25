@@ -4,7 +4,6 @@ import (
 	"cb_grok/internal/exchange"
 	"context"
 	"fmt"
-	"strconv"
 )
 
 func (b *bybit) PlaceSpotMarketOrder(symbol string, orderSide exchange.OrderSide, baseQty float64, takeProfit *float64, stopLoss *float64) (string, error) {
@@ -13,7 +12,7 @@ func (b *bybit) PlaceSpotMarketOrder(symbol string, orderSide exchange.OrderSide
 		return "", fmt.Errorf("unsupported order side: %s", orderSide)
 	}
 
-	qty := strconv.FormatFloat(baseQty, 'f', -1, 64)
+	qty := fmt.Sprintf("%.6f", *takeProfit)
 
 	req := b.client.NewPlaceOrderService("spot", symbol, orderSideValue, "Market", qty)
 
