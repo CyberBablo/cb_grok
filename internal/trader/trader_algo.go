@@ -108,7 +108,29 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 			if err != nil {
 				t.log.Error("create order failed", zap.Error(err))
 			}
+		} else if currentPrice >= *lastOrder.TakeProfitPrice { // sell take-profit
+			decision = DecisionSell
+			decisionTrigger = TriggerTakeProfit
+
+			transactionAmount = *lastOrder.BaseQty
+
+			err = t.orderUC.CreateSpotMarketOrder(t.model.Symbol, "sell", transactionAmount, nil, nil)
+			if err != nil {
+				t.log.Error("create order failed", zap.Error(err))
+			}
+
+		} else if currentPrice <= *lastOrder.StopLossPrice {
+			decision = DecisionSell
+			decisionTrigger = TriggerStopLoss
+
+			transactionAmount = *lastOrder.BaseQty
+
+			err = t.orderUC.CreateSpotMarketOrder(t.model.Symbol, "sell", transactionAmount, nil, nil)
+			if err != nil {
+				t.log.Error("create order failed", zap.Error(err))
+			}
 		}
+
 	} else if allowBuy {
 		if currentSignal == 1 { // buy signal
 			bal, err := t.exch.GetAvailableSpotWalletBalance(symbol.Quote)
