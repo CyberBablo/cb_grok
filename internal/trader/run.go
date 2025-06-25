@@ -31,7 +31,7 @@ func (t *trader) Run(mode TradeMode, timeframe string) error {
 
 	totalCandles := 500 * candlesPerDay
 
-	candles, err := t.exch.FetchSpotOHLCV(t.model.Symbol, exchange.Timeframe(timeframe), totalCandles)
+	candles, err := t.exch.FetchSpotOHLCV(t.model.Symbol, exchange.Timeframe1h, totalCandles)
 	if err != nil {
 		return err
 	}
