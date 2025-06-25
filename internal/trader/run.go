@@ -2,7 +2,9 @@ package trader
 
 import (
 	"bytes"
+	"cb_grok/internal/exchange"
 	"cb_grok/internal/exchange/bybit"
+	"cb_grok/internal/utils"
 	"cb_grok/pkg/models"
 	"context"
 	"encoding/json"
@@ -23,6 +25,18 @@ func (t *trader) Run(mode TradeMode, timeframe string) error {
 	if mode != ModeLiveDemo {
 		return fmt.Errorf("unsupported trade mode")
 	}
+
+	timeframeSec := utils.TimeframeToMilliseconds(timeframe) / 1000
+	candlesPerDay := (24 * 60 * 60) / int(timeframeSec)
+
+	totalCandles := 500 * candlesPerDay
+
+	candles, err := t.exch.FetchSpotOHLCV(t.model.Symbol, exchange.Timeframe(timeframe), totalCandles)
+	if err != nil {
+		return err
+	}
+
+	t.state.ohlcv = candles
 
 	ws := bybitapi.NewBybitPublicWebSocket("wss://stream.bybit.com/v5/public/spot", func(message string) error {
 		var msg bybit.WSKlineMessage
@@ -78,7 +92,7 @@ func (t *trader) Run(mode TradeMode, timeframe string) error {
 			symbol := strings.ReplaceAll(t.model.Symbol, "/", "")
 			ctx := context.Background()
 			if err := t.candleRepo.Create(ctx, symbol, "bybit", timeframe, candle); err != nil {
-				t.log.Error("failed to save candle", zap.Error(err), 
+				t.log.Error("failed to save candle", zap.Error(err),
 					zap.String("symbol", symbol),
 					zap.String("timeframe", timeframe),
 					zap.Int64("timestamp", candle.Timestamp))
@@ -165,7 +179,7 @@ func (t *trader) RunSimulation(mode TradeMode) error {
 			ctx := context.Background()
 			// For simulation, we use "simulation" as exchange name
 			if err := t.candleRepo.Create(ctx, symbol, "simulation", "1m", candle); err != nil {
-				t.log.Error("failed to save candle", zap.Error(err), 
+				t.log.Error("failed to save candle", zap.Error(err),
 					zap.String("symbol", symbol),
 					zap.Int64("timestamp", candle.Timestamp))
 			}

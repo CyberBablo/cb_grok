@@ -144,7 +144,7 @@ func runTrade(log *zap.Logger, tg *telegram.TelegramService, cfg *config.Config,
 		M (month)
 	*/
 	if tradingMode == "demo" {
-		err = trade.Run(trader.ModeLiveDemo, "1")
+		err = trade.Run(trader.ModeLiveDemo, "60")
 	} else {
 		err = trade.RunSimulation(trader.ModeSimulation)
 	}
