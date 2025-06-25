@@ -51,7 +51,7 @@ func (u *usecase) CreateSpotMarketOrder(symbol string, side exchange.OrderSide, 
 		return err
 	}
 
-	orderId, err := u.ex.PlaceSpotMarketOrder(symbol, side, baseQty, takeProfit, stopLoss)
+	orderId, err := u.ex.PlaceSpotMarketOrder(symbol, side, baseQty, nil, nil)
 	if err != nil {
 		u.log.Error("create order failed", zap.Error(err))
 		return err

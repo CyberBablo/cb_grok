@@ -18,10 +18,10 @@ func (b *bybit) PlaceSpotMarketOrder(symbol string, orderSide exchange.OrderSide
 	req := b.client.NewPlaceOrderService("spot", symbol, orderSideValue, "Market", qty)
 
 	if takeProfit != nil {
-		req.TakeProfit(fmt.Sprintf("%.2f", *takeProfit))
+		req = req.TakeProfit(fmt.Sprintf("%.2f", *takeProfit))
 	}
 	if stopLoss != nil {
-		req.StopLoss(fmt.Sprintf("%.2f", *stopLoss))
+		req = req.StopLoss(fmt.Sprintf("%.2f", *stopLoss))
 	}
 
 	orderResult, err := req.Do(context.Background())

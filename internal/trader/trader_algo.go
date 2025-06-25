@@ -119,7 +119,7 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 
 			decision = DecisionBuy
 
-			transactionAmount = bal / currentPrice
+			transactionAmount = bal
 
 			stopLoss := currentPrice - currentCandle.ATR*t.settings.StopLossMultiplier
 			takeProfit := currentPrice + currentCandle.ATR*t.settings.TakeProfitMultiplier
