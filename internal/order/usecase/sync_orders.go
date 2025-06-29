@@ -41,7 +41,7 @@ func (u *usecase) SyncOrders(ctx context.Context) {
 						u.log.Error("failed to update order status", zap.String("order_id", order.ExtID), zap.Error(err))
 						continue
 					}
-					if order.StatusID == int(order_model.OrderStatusFilled) {
+					if int(exchangeStatus) == int(order_model.OrderStatusFilled) {
 						u.log.Info(fmt.Sprintf("ORDER FILLED %s", order.ExtID))
 						quoteQty, err := u.ex.GetOrderQuoteQty(order.ExtID)
 						if err != nil {
