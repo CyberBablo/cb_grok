@@ -94,15 +94,9 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 
 	if allowSell {
 		if currentSignal == -1 { // sell signal
-			bal, err := t.exch.GetAvailableSpotWalletBalance(symbol.Base)
-			if err != nil {
-				t.log.Error("failed to get available wallet balance", zap.Error(err))
-				return nil, err
-			}
-
 			decision = DecisionSell
 
-			transactionAmount = bal
+			transactionAmount = *lastOrder.QuoteQty
 
 			err = t.orderUC.CreateSpotMarketOrder(t.model.Symbol, "sell", transactionAmount, nil, nil)
 			if err != nil {
@@ -112,7 +106,7 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 			decision = DecisionSell
 			decisionTrigger = TriggerTakeProfit
 
-			transactionAmount = *lastOrder.BaseQty
+			transactionAmount = *lastOrder.QuoteQty
 
 			err = t.orderUC.CreateSpotMarketOrder(t.model.Symbol, "sell", transactionAmount, nil, nil)
 			if err != nil {
@@ -123,7 +117,7 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 			decision = DecisionSell
 			decisionTrigger = TriggerStopLoss
 
-			transactionAmount = *lastOrder.BaseQty
+			transactionAmount = *lastOrder.QuoteQty
 
 			err = t.orderUC.CreateSpotMarketOrder(t.model.Symbol, "sell", transactionAmount, nil, nil)
 			if err != nil {
