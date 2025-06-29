@@ -8,14 +8,14 @@ import (
 	"go.uber.org/zap"
 )
 
-func (b *bybit) GetOrderInfo(orderId string) (order_model.OrderStatus, error) {
+func (b *bybit) GetOrderStatus(orderId string) (order_model.OrderStatus, error) {
 	params := map[string]interface{}{"orderId": orderId, "category": "spot"}
 	response, err := b.client.NewUtaBybitServiceWithParams(params).GetOpenOrders(context.Background())
 	if err != nil {
 		b.logger.Error("failed to get order info", zap.String("orderId", orderId), zap.Error(err))
 		return 0, err
 	}
-
+	fmt.Println(response)
 	result, err := ParseResponse(response)
 	if err != nil {
 		return 0, err

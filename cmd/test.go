@@ -21,20 +21,26 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	amount, err := bybitApp.GetAvailableSpotWalletBalance("USDT")
+	amount, err := bybitApp.GetAvailableSpotWalletBalance("BTC")
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println("Amount of demo balance: ", amount)
 
-	response, err := bybitApp.GetOrderInfo("1980936401583344896")
+	buyOrderId := "1981146562319092992"
+	status, err := bybitApp.GetOrderStatus(buyOrderId)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("__________________")
-	fmt.Println("Order info")
-	fmt.Println(response)
-	fmt.Println("__________________")
+
+	quoteQty, err := bybitApp.GetOrderQuoteQty(buyOrderId)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("order inf", bybitApp)
+	fmt.Println("status", status)
+	fmt.Println("quote", quoteQty)
 
 	//response, err := bybitApp.PlaceSpotMarketOrder("BTCUSDT", "buy", 100, nil, nil)
 	//

@@ -30,9 +30,14 @@ func (m *mock) FetchSpotOHLCV(symbol string, timeframe Timeframe, total int) ([]
 func (m *mock) PlaceSpotMarketOrder(symbol string, orderSide OrderSide, baseQty float64, takeProfit *float64, stopLoss *float64) (string, error) {
 	return "mock-order-id", nil
 }
-func (m *mock) GetOrderInfo(orderId string) (order_model.OrderStatus, error) {
+func (m *mock) GetOrderStatus(orderId string) (order_model.OrderStatus, error) {
 	return order_model.OrderStatusFilled, nil
 }
 func (m *mock) GetAvailableSpotWalletBalance(coin string) (float64, error) {
 	return 1000.0, nil
+}
+
+func (m *mock) GetOrderQuoteQty(orderId string) (float64, error) {
+	//TODO implement me
+	panic("implement me")
 }

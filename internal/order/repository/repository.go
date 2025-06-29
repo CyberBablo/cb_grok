@@ -66,6 +66,24 @@ func (r *repo) UpdateOrderStatus(orderID int64, statusID int) error {
 	return nil
 }
 
+func (r *repo) UpdateOrderQuoteQty(orderID int64, quoteQty float64) error {
+	query := `
+		UPDATE public.order 
+		SET quote_qty = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
+		RETURNING id
+	`
+	var id int64
+	err := r.db.Get(&id, query, quoteQty, orderID)
+	if err != nil {
+		return fmt.Errorf("failed to update order status: %w", err)
+	}
+	if id == 0 {
+		return errors.New("order not found")
+	}
+	return nil
+}
+
 func (r *repo) GetActiveOrders() ([]order_model.Order, error) {
 	var orders []order_model.Order
 	query := `

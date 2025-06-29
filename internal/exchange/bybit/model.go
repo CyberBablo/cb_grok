@@ -39,6 +39,8 @@ type Order struct {
 	StopLoss     string `json:"stopLoss"`
 	CreatedTime  string `json:"createdTime"`
 	UpdatedTime  string `json:"updatedTime"`
+	CumExecQty   string `json:"cumExecQty"`
+	CumExecValue string `json:"cumExecValue"`
 }
 
 type WalletBalanceList struct {

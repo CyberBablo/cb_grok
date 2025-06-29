@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	order_model "cb_grok/internal/order/model"
 	"context"
 	"go.uber.org/zap"
 	"time"
@@ -27,7 +28,7 @@ func (u *usecase) SyncOrders(ctx context.Context) {
 			}
 
 			for _, order := range orders {
-				exchangeStatus, err := u.ex.GetOrderInfo(order.ExtID)
+				exchangeStatus, err := u.ex.GetOrderStatus(order.ExtID)
 				if err != nil {
 					u.log.Error("failed to get order info", zap.String("order_id", order.ExtID), zap.Error(err))
 					continue
@@ -38,6 +39,19 @@ func (u *usecase) SyncOrders(ctx context.Context) {
 						u.log.Error("failed to update order status", zap.String("order_id", order.ExtID), zap.Error(err))
 						continue
 					}
+					if order.StatusID == int(order_model.OrderStatusFilled) {
+						quoteQty, err := u.ex.GetOrderQuoteQty(order.ExtID)
+						if err != nil {
+							u.log.Error("failed to update order quoteQty", zap.String("order_id", order.ExtID), zap.Error(err))
+							continue
+						}
+						err = u.repo.UpdateOrderQuoteQty(order.ID, quoteQty)
+						if err != nil {
+							u.log.Error("failed to update order quoteQty", zap.String("order_id", order.ExtID), zap.Error(err))
+							continue
+						}
+					}
+
 				}
 			}
 		}
