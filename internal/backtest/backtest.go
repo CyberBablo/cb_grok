@@ -58,10 +58,15 @@ func (b *backtest) Run(ohlcv []models.OHLCV, mod *model.Model) (*BacktestResult,
 		},
 		InitialCapital: b.InitialCapital,
 	})
+	tradeState := trade.GetState()
 
 	appliedCandles := str.ApplyIndicators(ohlcv, mod.StrategyParams)
 	if appliedCandles == nil {
-		return nil, fmt.Errorf("no candles after strategy apply")
+		return &BacktestResult{
+			Orders:       tradeState.GetOrders(),
+			FinalCapital: tradeState.GetPortfolioValue(),
+			TradeState:   tradeState,
+		}, nil
 	}
 
 	for _, c := range appliedCandles {
@@ -77,8 +82,6 @@ func (b *backtest) Run(ohlcv []models.OHLCV, mod *model.Model) (*BacktestResult,
 
 		_, _ = trade.BacktestAlgo(valCandles)
 	}
-
-	tradeState := trade.GetState()
 
 	if len(tradeState.GetOrders()) > 1 {
 		return &BacktestResult{
