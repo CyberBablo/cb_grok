@@ -9,13 +9,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	bybitapi "github.com/bybit-exchange/bybit.go.api"
-	"github.com/dnlo/struct2csv"
-	"github.com/gorilla/websocket"
-	"go.uber.org/zap"
 	"strconv"
 	"strings"
 	"time"
+
+	bybitapi "github.com/bybit-exchange/bybit.go.api"
+	"github.com/dnlo/struct2csv"
+	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
+	"go.uber.org/zap"
 )
 
 func (t *trader) Run(mode TradeMode, timeframe string) error {
@@ -38,7 +40,20 @@ func (t *trader) Run(mode TradeMode, timeframe string) error {
 
 	t.state.ohlcv = candles
 
+	default_logger := new(zap.Logger)
+	*default_logger = *t.log
+
 	ws := bybitapi.NewBybitPublicWebSocket("wss://stream.bybit.com/v5/public/spot", func(message string) error {
+		t.mu.Lock()
+		t.log = t.log.With(zap.String("Id", uuid.NewString()))
+		t.mu.Unlock()
+
+		defer func() {
+			t.mu.Lock()
+			t.log = default_logger
+			t.mu.Unlock()
+		}()
+
 		var msg bybit.WSKlineMessage
 		err := json.Unmarshal([]byte(message), &msg)
 		if err != nil {

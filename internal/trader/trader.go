@@ -9,6 +9,8 @@ import (
 	"cb_grok/internal/strategy"
 	"cb_grok/internal/telegram"
 	"cb_grok/pkg/models"
+	"sync"
+
 	"go.uber.org/zap"
 )
 
@@ -75,6 +77,8 @@ type trader struct {
 
 	tg  *telegram.TelegramService
 	log *zap.Logger
+
+	mu sync.RWMutex
 
 	metricsCollector MetricsCollector
 }
