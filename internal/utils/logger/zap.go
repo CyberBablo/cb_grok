@@ -6,14 +6,19 @@ import (
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 // ZapConfig для логгера
 type ZapConfig struct {
-	Level       string   `yaml:"level"`
-	Development bool     `yaml:"development"`
-	Encoding    string   `yaml:"encoding"`
-	OutputPaths []string `yaml:"output_paths"`
+	Level        string   `yaml:"level"`
+	Development  bool     `yaml:"development"`
+	Encoding     string   `yaml:"encoding"`
+	OutputPaths  []string `yaml:"output_paths"`
+	FileLog      bool     `yaml:"file_log"`
+	FilePath     string   `yaml:"filename"`
+	FileMaxSize  int      `yaml:"file_max_size"`
+	FileCompress bool     `yaml:"file_compress"`
 }
 
 // NewZapLogger создает новый экземпляр zap логгера
@@ -76,9 +81,33 @@ func NewZapLogger(cfg ZapConfig) (*zap.Logger, error) {
 
 	// Создаем core
 	core := zapcore.NewCore(encoder, combinedWriter, level)
+	core_merge := core
+
+	if cfg.FileLog {
+		logFile := &lumberjack.Logger{
+			Filename:   cfg.FilePath,
+			MaxSize:    cfg.FileMaxSize,
+			MaxBackups: 5,
+			MaxAge:     30,
+			Compress:   cfg.FileCompress,
+		}
+
+		fileEncoder := zapcore.NewJSONEncoder(encoderConfig)
+		fileWriteSyncer := zapcore.AddSync(logFile)
+		fileCore := zapcore.NewCore(
+			fileEncoder,
+			fileWriteSyncer,
+			zapcore.InfoLevel,
+		)
+		core_merge = zapcore.NewTee(core, fileCore)
+
+	} else {
+
+		core_merge = zapcore.NewTee(core)
+	}
 
 	// Создаем логгер
-	logger := zap.New(core)
+	logger := zap.New(core_merge)
 
 	// Добавляем опции
 	if cfg.Development {

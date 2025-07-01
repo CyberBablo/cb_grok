@@ -21,10 +21,14 @@ type AppConfig struct {
 }
 
 type LoggerConfig struct {
-	Level       string   `yaml:"level"`
-	Development bool     `yaml:"development"`
-	Encoding    string   `yaml:"encoding"` // json или console
-	OutputPaths []string `yaml:"output_paths"`
+	Level        string   `yaml:"level"`
+	Development  bool     `yaml:"development"`
+	Encoding     string   `yaml:"encoding"` // json или console
+	OutputPaths  []string `yaml:"output_paths"`
+	FileLog      bool     `yaml:"file_log"`
+	FilePath     string   `yaml:"filename"`
+	FileMaxSize  int      `yaml:"file_max_size"`
+	FileCompress bool     `yaml:"file_compress"`
 }
 
 type BybitConfig struct {

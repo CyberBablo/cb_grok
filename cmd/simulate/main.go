@@ -47,10 +47,14 @@ func main() {
 		// Logger
 		fx.Provide(func(cfg *config.Config) (*zap.Logger, error) {
 			return logger.NewZapLogger(logger.ZapConfig{
-				Level:       cfg.Logger.Level,
-				Development: cfg.Logger.Development,
-				Encoding:    cfg.Logger.Encoding,
-				OutputPaths: cfg.Logger.OutputPaths,
+				Level:        cfg.Logger.Level,
+				Development:  cfg.Logger.Development,
+				Encoding:     cfg.Logger.Encoding,
+				OutputPaths:  cfg.Logger.OutputPaths,
+				FileLog:      cfg.Logger.FileLog,
+				FilePath:     cfg.Logger.FilePath,
+				FileMaxSize:  cfg.Logger.FileMaxSize,
+				FileCompress: cfg.Logger.FileCompress,
 			})
 		}),
 
