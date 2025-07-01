@@ -51,6 +51,7 @@ services:
       - CONFIG_PATH=./config/config.yaml
     volumes:
       - ./config/config.yaml:/config/config.yaml
+      - /var/logs/demo_trader:/logs
     restart: unless-stopped
     profiles: [app]
     depends_on:
