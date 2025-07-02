@@ -1,6 +1,6 @@
 package order
 
-import order_model "cb_grok/internal/order/model"
+import order_model "cb_grok/internal/models/order"
 
 // Repository interface
 type Repository interface {

@@ -1,7 +1,7 @@
 package trader
 
 import (
-	order_model "cb_grok/internal/order/model"
+	order_model "cb_grok/internal/models/order"
 	"cb_grok/pkg/models"
 	"context"
 	"encoding/json"

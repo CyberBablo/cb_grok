@@ -1,7 +1,7 @@
 package usecase
 
 import (
-	"cb_grok/internal/order/model"
+	order_model "cb_grok/internal/models/order"
 )
 
 func (u *usecase) GetSymbolByCode(code string) (*order_model.Symbol, error) {

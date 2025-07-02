@@ -1,7 +1,7 @@
 package bybit
 
 import (
-	"cb_grok/internal/order/model"
+	order_model "cb_grok/internal/models/order"
 	"context"
 	"encoding/json"
 	"fmt"

@@ -1,12 +1,14 @@
 package usecase
 
 import (
-	"cb_grok/internal/exchange"
-	"cb_grok/internal/order/model"
 	"errors"
+	"time"
+
 	"github.com/samber/lo"
 	"go.uber.org/zap"
-	"time"
+
+	"cb_grok/internal/exchange"
+	order_model "cb_grok/internal/models/order"
 )
 
 func (u *usecase) CreateSpotMarketOrder(symbol string, side exchange.OrderSide, baseQty float64, takeProfit *float64, stopLoss *float64) error {

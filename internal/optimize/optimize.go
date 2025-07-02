@@ -2,6 +2,18 @@ package optimize
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/c-bata/goptuna"
+	"github.com/c-bata/goptuna/tpe"
+	"github.com/dnlo/struct2csv"
+	"go.uber.org/fx"
+	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
+
 	"cb_grok/config"
 	"cb_grok/internal/backtest"
 	"cb_grok/internal/exchange"
@@ -9,16 +21,6 @@ import (
 	strategy_model "cb_grok/internal/models/strategy"
 	"cb_grok/internal/utils"
 	"cb_grok/pkg/telegram"
-	"context"
-	"encoding/json"
-	"fmt"
-	"github.com/c-bata/goptuna"
-	"github.com/c-bata/goptuna/tpe"
-	"github.com/dnlo/struct2csv"
-	"go.uber.org/fx"
-	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
-	"time"
 )
 
 type Optimize interface {

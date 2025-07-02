@@ -2,6 +2,10 @@ package trader
 
 import (
 	"bytes"
+	"sync"
+
+	"go.uber.org/zap"
+
 	"cb_grok/internal/candle"
 	"cb_grok/internal/exchange"
 	strategy_model "cb_grok/internal/models/strategy"
@@ -9,9 +13,6 @@ import (
 	"cb_grok/internal/strategy"
 	"cb_grok/pkg/models"
 	"cb_grok/pkg/telegram"
-	"sync"
-
-	"go.uber.org/zap"
 )
 
 type TradeMode string

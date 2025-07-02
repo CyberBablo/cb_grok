@@ -1,4 +1,4 @@
-package order_model
+package order
 
 import (
 	"time"
@@ -33,27 +33,3 @@ type Symbol struct {
 	Base  string `db:"base"`
 	Quote string `db:"quote"`
 }
-
-type OrderStatus int
-
-const (
-	OrderStatusNew      OrderStatus = 1
-	OrderStatusPlaced   OrderStatus = 2
-	OrderStatusFilled   OrderStatus = 3
-	OrderStatusCanceled OrderStatus = 4
-)
-
-const (
-	OrderProductSpot int = 1
-)
-
-const (
-	OrderTypeMarket int = 1
-)
-
-type OrderSide int
-
-const (
-	OrderSideBuy  OrderSide = 1
-	OrderSideSell OrderSide = 2
-)

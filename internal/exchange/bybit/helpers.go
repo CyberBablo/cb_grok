@@ -2,7 +2,7 @@ package bybit
 
 import (
 	"cb_grok/internal/exchange"
-	"cb_grok/internal/order/model"
+	order_model "cb_grok/internal/models/order"
 	"fmt"
 	bybitapi "github.com/bybit-exchange/bybit.go.api"
 )

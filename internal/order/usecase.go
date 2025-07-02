@@ -2,7 +2,7 @@ package order
 
 import (
 	"cb_grok/internal/exchange"
-	order_model "cb_grok/internal/order/model"
+	order_model "cb_grok/internal/models/order"
 	"context"
 )
 

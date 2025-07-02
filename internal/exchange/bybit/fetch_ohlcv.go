@@ -1,17 +1,19 @@
 package bybit
 
 import (
-	"cb_grok/internal/exchange"
-	"cb_grok/internal/utils"
-	"cb_grok/pkg/models"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	bybitapi "github.com/bybit-exchange/bybit.go.api"
-	"go.uber.org/zap"
 	"sort"
 	"strconv"
+
+	bybitapi "github.com/bybit-exchange/bybit.go.api"
+	"go.uber.org/zap"
+
+	"cb_grok/internal/exchange"
+	"cb_grok/internal/utils"
+	"cb_grok/pkg/models"
 )
 
 func (b *bybit) FetchSpotOHLCV(symbol string, timeframe exchange.Timeframe, total int) ([]models.OHLCV, error) {

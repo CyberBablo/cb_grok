@@ -1,8 +1,8 @@
 package repository
 
 import (
+	order_model "cb_grok/internal/models/order"
 	"cb_grok/internal/order"
-	order_model "cb_grok/internal/order/model"
 	"cb_grok/pkg/postgres"
 	"errors"
 	"fmt"

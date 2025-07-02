@@ -1,6 +1,11 @@
 package backtest
 
 import (
+	"fmt"
+
+	"go.uber.org/fx"
+	"go.uber.org/zap"
+
 	"cb_grok/internal/candle"
 	"cb_grok/internal/exchange"
 	model "cb_grok/internal/models/strategy"
@@ -9,9 +14,6 @@ import (
 	"cb_grok/internal/trader"
 	"cb_grok/pkg/models"
 	"cb_grok/pkg/telegram"
-	"fmt"
-	"go.uber.org/fx"
-	"go.uber.org/zap"
 )
 
 type Backtest interface {
