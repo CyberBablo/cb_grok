@@ -71,13 +71,13 @@ func CMD() {
 		// Provide database connection
 		fx.Provide(func(cfg *config.Config) (postgres.Postgres, error) {
 			return postgres.InitPsqlDB(&postgres.Conn{
-				Host:     cfg.PostgresMetrics.Host,
-				Port:     cfg.PostgresMetrics.Port,
-				User:     cfg.PostgresMetrics.User,
-				Password: cfg.PostgresMetrics.Password,
-				DBName:   cfg.PostgresMetrics.DBName,
-				SSLMode:  cfg.PostgresMetrics.SSLMode,
-				PgDriver: cfg.PostgresMetrics.PgDriver,
+				Host:     cfg.Postgres.Host,
+				Port:     cfg.Postgres.Port,
+				User:     cfg.Postgres.User,
+				Password: cfg.Postgres.Password,
+				DBName:   cfg.Postgres.DBName,
+				SSLMode:  cfg.Postgres.SSLMode,
+				PgDriver: cfg.Postgres.PgDriver,
 			})
 		}),
 

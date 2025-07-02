@@ -1,13 +1,12 @@
 package config
 
 type Config struct {
-	App             AppConfig             `yaml:"app"`
-	Logger          LoggerConfig          `yaml:"logger"`
-	Telegram        TelegramConfig        `yaml:"telegram"`
-	Bybit           BybitConfig           `yaml:"bybit"`
-	Postgres        PostgresConfig        `yaml:"postgres"`
-	PostgresMetrics PostgresMetricsConfig `yaml:"postgres_metrics"`
-	DemoTrading     DemoTrading           `yaml:"demo_trading"`
+	App         AppConfig      `yaml:"app"`
+	Logger      LoggerConfig   `yaml:"logger"`
+	Telegram    TelegramConfig `yaml:"telegram"`
+	Bybit       BybitConfig    `yaml:"bybit"`
+	Postgres    PostgresConfig `yaml:"postgres"`
+	DemoTrading DemoTrading    `yaml:"demo_trading"`
 }
 
 type DemoTrading struct {
@@ -43,16 +42,6 @@ type TelegramConfig struct {
 }
 
 type PostgresConfig struct {
-	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	DBName   string `yaml:"db_name"`
-	SSLMode  string `yaml:"ssl_mode"`
-	PgDriver string `yaml:"pg_driver"`
-}
-
-type PostgresMetricsConfig struct {
 	Host     string `yaml:"host"`
 	Port     string `yaml:"port"`
 	User     string `yaml:"user"`
