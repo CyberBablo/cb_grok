@@ -2,7 +2,7 @@ package repository
 
 import (
 	"cb_grok/internal/candle"
-	"cb_grok/pkg/models"
+	candle_model "cb_grok/internal/models/candle"
 	"cb_grok/pkg/postgres"
 	"context"
 	"fmt"
@@ -16,7 +16,7 @@ func New(db postgres.Postgres) candle.Repository {
 	return &repo{db: db}
 }
 
-func (r *repo) Create(ctx context.Context, symbol, exchange, timeframe string, candle models.OHLCV) error {
+func (r *repo) Create(ctx context.Context, symbol, exchange, timeframe string, candle candle_model.OHLCV) error {
 	query := `
 		INSERT INTO candles (symbol, exchange, timeframe, timestamp, open, high, low, close, volume)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -40,7 +40,7 @@ func (r *repo) Create(ctx context.Context, symbol, exchange, timeframe string, c
 	return nil
 }
 
-func (r *repo) Select(ctx context.Context, symbol, exchange, timeframe string, startTime, endTime int64) ([]models.OHLCV, error) {
+func (r *repo) Select(ctx context.Context, symbol, exchange, timeframe string, startTime, endTime int64) ([]candle_model.OHLCV, error) {
 	query := `
 		SELECT
 			timestamp,
@@ -66,9 +66,9 @@ func (r *repo) Select(ctx context.Context, symbol, exchange, timeframe string, s
 	}
 	defer rows.Close()
 
-	var result []models.OHLCV
+	var result []candle_model.OHLCV
 	for rows.Next() {
-		var c models.OHLCV
+		var c candle_model.OHLCV
 		err := rows.Scan(&c.Timestamp, &c.Open, &c.High, &c.Low, &c.Close, &c.Volume)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan candle: %w", err)

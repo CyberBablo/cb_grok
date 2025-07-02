@@ -1,15 +1,15 @@
 package optimize
 
 import (
+	candle_model "cb_grok/internal/models/candle"
 	strategy_model "cb_grok/internal/models/strategy"
-	"cb_grok/pkg/models"
 	"github.com/c-bata/goptuna"
 	"go.uber.org/zap"
 )
 
 type objectiveParams struct {
 	symbol               string
-	candles              []models.OHLCV
+	candles              []candle_model.OHLCV
 	setDays              int
 	timePeriodMultiplier float64
 }

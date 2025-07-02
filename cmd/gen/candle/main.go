@@ -4,8 +4,8 @@ import (
 	"cb_grok/config"
 	"cb_grok/internal/candle"
 	candleRepository "cb_grok/internal/candle/repository"
+	candle_model "cb_grok/internal/models/candle"
 	"cb_grok/pkg/logger"
-	"cb_grok/pkg/models"
 	"cb_grok/pkg/postgres"
 	"context"
 	"flag"
@@ -154,7 +154,7 @@ func generateAndSaveCandles(ctx context.Context, log *zap.Logger, repo candle.Re
 		basePrice = 100.0 // Default for other symbols
 	}
 
-	candles := make([]models.OHLCV, count)
+	candles := make([]candle_model.OHLCV, count)
 
 	for i := 0; i < count; i++ {
 		// Calculate timestamp for this candle
@@ -177,7 +177,7 @@ func generateAndSaveCandles(ctx context.Context, log *zap.Logger, repo candle.Re
 		// Volume in base currency
 		volume := 100 + rand.Float64()*900 // Between 100 and 1000
 
-		candles[i] = models.OHLCV{
+		candles[i] = candle_model.OHLCV{
 			Timestamp: timestamp,
 			Open:      open,
 			High:      high,

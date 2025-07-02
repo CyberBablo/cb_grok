@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/exchange/bybit"
+	candle_model "cb_grok/internal/models/candle"
 	"cb_grok/internal/utils"
-	"cb_grok/pkg/models"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -93,7 +93,7 @@ func (t *trader) Run(mode TradeMode, timeframe string) error {
 			return fmt.Errorf("cannot parse candle: %+v", currCandle)
 		}
 
-		var candle = models.OHLCV{
+		var candle = candle_model.OHLCV{
 			Timestamp: currCandle.Start,
 			Open:      o,
 			High:      h,
@@ -181,7 +181,7 @@ func (t *trader) RunSimulation(mode TradeMode) error {
 			break
 		}
 
-		var candle models.OHLCV
+		var candle candle_model.OHLCV
 		err = json.Unmarshal(message, &candle)
 		if err != nil {
 			t.log.Error("cannot parse ohlcv message", zap.Error(err))

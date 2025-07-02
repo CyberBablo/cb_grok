@@ -2,8 +2,8 @@ package ohlc
 
 import (
 	"cb_grok/internal/exchange/bybit"
+	candle_model "cb_grok/internal/models/candle"
 	"cb_grok/pkg/logger"
-	"cb_grok/pkg/models"
 	"fmt"
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/components"
@@ -39,7 +39,7 @@ func CMD() {
 	log.Info(fmt.Sprintf("Candles[0]: %+v", candles[0]))
 	log.Info(fmt.Sprintf("Candles[%d]: %+v", len(candles)-1, candles[len(candles)-1]))
 
-	//var appliedCandles []models.AppliedOHLCV
+	//var appliedCandles []candle_model.AppliedOHLCV
 	//
 	//// 1) full apply
 	//strat := strategy.NewLinearBiasStrategy()
@@ -63,7 +63,7 @@ func CMD() {
 	}
 }
 
-func klineChart(ohlcv []models.OHLCV) *charts.Kline {
+func klineChart(ohlcv []candle_model.OHLCV) *charts.Kline {
 	kline := charts.NewKLine()
 
 	x := make([]string, 0)

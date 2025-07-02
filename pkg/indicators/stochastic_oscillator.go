@@ -1,12 +1,12 @@
 package indicators
 
 import (
-	"cb_grok/pkg/models"
+	candle_model "cb_grok/internal/models/candle"
 	"math"
 )
 
 // CalculateStochasticOscillator calculates the Stochastic Oscillator (%K and %D)
-func CalculateStochasticOscillator(candles []models.OHLCV, kPeriod int, dPeriod int) ([]float64, []float64) {
+func CalculateStochasticOscillator(candles []candle_model.OHLCV, kPeriod int, dPeriod int) ([]float64, []float64) {
 	if len(candles) < kPeriod {
 		return nil, nil
 	}

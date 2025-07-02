@@ -8,10 +8,10 @@ import (
 
 	"cb_grok/internal/candle"
 	"cb_grok/internal/exchange"
+	candle_model "cb_grok/internal/models/candle"
 	strategy_model "cb_grok/internal/models/strategy"
 	"cb_grok/internal/order"
 	"cb_grok/internal/strategy"
-	"cb_grok/pkg/models"
 	"cb_grok/pkg/telegram"
 )
 
@@ -47,21 +47,21 @@ type Trader interface {
 	Setup(params TraderParams)
 	Run(mode TradeMode, timeframe string) error
 	RunSimulation(mode TradeMode) error
-	BacktestAlgo(appliedOHLCV []models.AppliedOHLCV) (*Action, error)
+	BacktestAlgo(appliedOHLCV []candle_model.AppliedOHLCV) (*Action, error)
 	GetState() State
 	SetMetricsCollector(collector MetricsCollector)
 }
 
 type State interface {
 	GetOrders() []Action
-	GetOHLCV() []models.OHLCV
+	GetOHLCV() []candle_model.OHLCV
 	GetPortfolioValue() float64
 	GetPortfolioValues() []PortfolioValue
 	CalculateWinRate() float64
 	CalculateMaxDrawdown() float64
 	CalculateSharpeRatio() float64
 	GetInitialCapital() float64
-	GetAppliedOHLCV() []models.AppliedOHLCV
+	GetAppliedOHLCV() []candle_model.AppliedOHLCV
 
 	GenerateCharts() (*bytes.Buffer, error)
 }

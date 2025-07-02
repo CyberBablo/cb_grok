@@ -1,9 +1,9 @@
 package strategy
 
 import (
+	candle_model "cb_grok/internal/models/candle"
 	strategy_model "cb_grok/internal/models/strategy"
 	"cb_grok/pkg/indicators"
-	"cb_grok/pkg/models"
 	"go.uber.org/zap"
 	"math"
 )
@@ -14,7 +14,7 @@ func NewLinearBiasStrategy() Strategy {
 	return &LinearBiasStrategy{}
 }
 
-func (s *LinearBiasStrategy) ApplyIndicators(candles []models.OHLCV, params strategy_model.StrategyParamsModel) []models.AppliedOHLCV {
+func (s *LinearBiasStrategy) ApplyIndicators(candles []candle_model.OHLCV, params strategy_model.StrategyParamsModel) []candle_model.AppliedOHLCV {
 	requiredCandles := max(params.MALongPeriod, params.EMALongPeriod, params.MACDLongPeriod, params.BollingerPeriod, params.StochasticKPeriod)
 	if len(candles) < requiredCandles {
 		zap.S().Infof("strategy: required candles: %d", requiredCandles)
@@ -41,9 +41,9 @@ func (s *LinearBiasStrategy) ApplyIndicators(candles []models.OHLCV, params stra
 		volatility[i] = atr[i] > params.ATRThreshold
 	}
 
-	var appliedCandles []models.AppliedOHLCV
+	var appliedCandles []candle_model.AppliedOHLCV
 	for i := range candles {
-		appliedCandles = append(appliedCandles, models.AppliedOHLCV{
+		appliedCandles = append(appliedCandles, candle_model.AppliedOHLCV{
 			OHLCV:       candles[i],
 			ATR:         atr[i],
 			RSI:         rsi[i],
@@ -65,7 +65,7 @@ func (s *LinearBiasStrategy) ApplyIndicators(candles []models.OHLCV, params stra
 	return appliedCandles
 }
 
-func (s *LinearBiasStrategy) ApplySignals(candles []models.AppliedOHLCV, params strategy_model.StrategyParamsModel) []models.AppliedOHLCV {
+func (s *LinearBiasStrategy) ApplySignals(candles []candle_model.AppliedOHLCV, params strategy_model.StrategyParamsModel) []candle_model.AppliedOHLCV {
 	if len(candles) < 2 {
 		return candles
 	}

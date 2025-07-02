@@ -1,11 +1,11 @@
 package indicators
 
 import (
-	"cb_grok/pkg/models"
+	candle_model "cb_grok/internal/models/candle"
 	"math"
 )
 
-func CalculateBollingerBands(candles []models.OHLCV, period int, stdDevMultiplier float64) ([]float64, []float64, []float64) {
+func CalculateBollingerBands(candles []candle_model.OHLCV, period int, stdDevMultiplier float64) ([]float64, []float64, []float64) {
 	if len(candles) < period || period <= 0 || stdDevMultiplier < 0 {
 		return nil, nil, nil // Недостаточно данных или некорректные параметры
 	}

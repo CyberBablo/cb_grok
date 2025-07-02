@@ -1,11 +1,11 @@
 package indicators
 
 import (
-	"cb_grok/pkg/models"
+	candle_model "cb_grok/internal/models/candle"
 	"github.com/cinar/indicator"
 )
 
-func CalculateMACD(candles []models.OHLCV, shortPeriod, longPeriod, signalPeriod int) ([]float64, []float64) {
+func CalculateMACD(candles []candle_model.OHLCV, shortPeriod, longPeriod, signalPeriod int) ([]float64, []float64) {
 	closes := make([]float64, len(candles))
 	for i, c := range candles {
 		closes[i] = c.Close

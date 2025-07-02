@@ -1,11 +1,11 @@
 package candle
 
 import (
-	"cb_grok/pkg/models"
+	candle_model "cb_grok/internal/models/candle"
 	"context"
 )
 
 type Repository interface {
-	Create(ctx context.Context, symbol, exchange, timeframe string, candle models.OHLCV) error
-	Select(ctx context.Context, symbol, exchange, timeframe string, startTime, endTime int64) ([]models.OHLCV, error)
+	Create(ctx context.Context, symbol, exchange, timeframe string, candle candle_model.OHLCV) error
+	Select(ctx context.Context, symbol, exchange, timeframe string, startTime, endTime int64) ([]candle_model.OHLCV, error)
 }

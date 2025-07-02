@@ -1,11 +1,11 @@
 package indicators
 
 import (
-	"cb_grok/pkg/models"
+	candle_model "cb_grok/internal/models/candle"
 	"github.com/cinar/indicator"
 )
 
-func CalculateATR(candles []models.OHLCV, period int) []float64 {
+func CalculateATR(candles []candle_model.OHLCV, period int) []float64 {
 	highs := make([]float64, len(candles))
 	lows := make([]float64, len(candles))
 	closes := make([]float64, len(candles))

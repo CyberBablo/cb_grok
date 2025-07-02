@@ -1,7 +1,7 @@
 package trader
 
 import (
-	"cb_grok/pkg/models"
+	candle_model "cb_grok/internal/models/candle"
 	"math"
 )
 
@@ -9,11 +9,11 @@ func (s *state) GetOrders() []Action {
 	return s.orders
 }
 
-func (s *state) GetOHLCV() []models.OHLCV {
+func (s *state) GetOHLCV() []candle_model.OHLCV {
 	return s.ohlcv
 }
 
-func (s *state) GetAppliedOHLCV() []models.AppliedOHLCV {
+func (s *state) GetAppliedOHLCV() []candle_model.AppliedOHLCV {
 	return s.appliedOHLCV
 }
 

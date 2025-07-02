@@ -1,11 +1,11 @@
 package strategy
 
 import (
+	candle_model "cb_grok/internal/models/candle"
 	strategy_model "cb_grok/internal/models/strategy"
-	"cb_grok/pkg/models"
 )
 
 type Strategy interface {
-	ApplyIndicators(candles []models.OHLCV, params strategy_model.StrategyParamsModel) []models.AppliedOHLCV
-	ApplySignals(appliedCandles []models.AppliedOHLCV, params strategy_model.StrategyParamsModel) []models.AppliedOHLCV
+	ApplyIndicators(candles []candle_model.OHLCV, params strategy_model.StrategyParamsModel) []candle_model.AppliedOHLCV
+	ApplySignals(appliedCandles []candle_model.AppliedOHLCV, params strategy_model.StrategyParamsModel) []candle_model.AppliedOHLCV
 }

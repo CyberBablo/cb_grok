@@ -1,8 +1,8 @@
 package trader
 
 import (
+	candle_model "cb_grok/internal/models/candle"
 	order_model "cb_grok/internal/models/order"
-	"cb_grok/pkg/models"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func (t *trader) processAlgo(candle models.OHLCV) (*Action, error) {
+func (t *trader) processAlgo(candle candle_model.OHLCV) (*Action, error) {
 	if len(t.state.ohlcv) > 0 && t.state.ohlcv[len(t.state.ohlcv)-1].Timestamp == candle.Timestamp {
 		t.state.ohlcv[len(t.state.ohlcv)-1] = candle
 	} else {
@@ -29,8 +29,8 @@ func (t *trader) processAlgo(candle models.OHLCV) (*Action, error) {
 	return t.algo(appliedOHLCV)
 }
 
-func (t *trader) BacktestAlgo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
-	tmpOHLCV := make([]models.OHLCV, len(appliedOHLCV))
+func (t *trader) BacktestAlgo(appliedOHLCV []candle_model.AppliedOHLCV) (*Action, error) {
+	tmpOHLCV := make([]candle_model.OHLCV, len(appliedOHLCV))
 	for i := range appliedOHLCV {
 		tmpOHLCV[i] = appliedOHLCV[i].OHLCV
 	}
@@ -39,7 +39,7 @@ func (t *trader) BacktestAlgo(appliedOHLCV []models.AppliedOHLCV) (*Action, erro
 	return t.algo(appliedOHLCV)
 }
 
-func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
+func (t *trader) algo(appliedOHLCV []candle_model.AppliedOHLCV) (*Action, error) {
 	appliedOHLCV = t.strategy.ApplySignals(appliedOHLCV, t.model.StrategyParamsModel)
 	if appliedOHLCV == nil {
 		return nil, nil

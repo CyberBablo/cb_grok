@@ -12,11 +12,11 @@ import (
 	"go.uber.org/zap"
 
 	"cb_grok/internal/exchange"
+	candle_model "cb_grok/internal/models/candle"
 	"cb_grok/internal/utils"
-	"cb_grok/pkg/models"
 )
 
-func (b *bybit) FetchSpotOHLCV(symbol string, timeframe exchange.Timeframe, total int) ([]models.OHLCV, error) {
+func (b *bybit) FetchSpotOHLCV(symbol string, timeframe exchange.Timeframe, total int) ([]candle_model.OHLCV, error) {
 	timeframeValue := GetBybitTimeframe(timeframe)
 	if timeframeValue == "" {
 		return nil, fmt.Errorf("unsupported timeframe: %s", timeframe)
@@ -27,7 +27,7 @@ func (b *bybit) FetchSpotOHLCV(symbol string, timeframe exchange.Timeframe, tota
 		limit = total
 	}
 
-	var candles []models.OHLCV
+	var candles []candle_model.OHLCV
 
 	since := int64(0)
 
@@ -81,7 +81,7 @@ func (b *bybit) FetchSpotOHLCV(symbol string, timeframe exchange.Timeframe, tota
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse decimal in ohlcv: %w", err)
 			}
-			candles = append(candles, models.OHLCV{
+			candles = append(candles, candle_model.OHLCV{
 				Timestamp: ts,
 				Open:      o,
 				High:      h,
@@ -117,7 +117,7 @@ func (b *bybit) FetchSpotOHLCV(symbol string, timeframe exchange.Timeframe, tota
 
 	// deduplication
 	if len(candles) > 1 {
-		uniqueCandles := []models.OHLCV{candles[0]}
+		uniqueCandles := []candle_model.OHLCV{candles[0]}
 		for i := 1; i < len(candles); i++ {
 			if candles[i].Timestamp != candles[i-1].Timestamp {
 				uniqueCandles = append(uniqueCandles, candles[i])

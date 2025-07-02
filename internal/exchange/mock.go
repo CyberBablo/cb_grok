@@ -1,8 +1,8 @@
 package exchange
 
 import (
+	candle_model "cb_grok/internal/models/candle"
 	order_model "cb_grok/internal/models/order"
-	"cb_grok/pkg/models"
 )
 
 type mock struct {
@@ -15,8 +15,8 @@ func (m *mock) Name() string {
 	return "mock"
 }
 
-func (m *mock) FetchSpotOHLCV(symbol string, timeframe Timeframe, total int) ([]models.OHLCV, error) {
-	return []models.OHLCV{
+func (m *mock) FetchSpotOHLCV(symbol string, timeframe Timeframe, total int) ([]candle_model.OHLCV, error) {
+	return []candle_model.OHLCV{
 		{
 			Timestamp: 0,
 			Open:      0,

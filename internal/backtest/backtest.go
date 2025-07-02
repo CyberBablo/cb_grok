@@ -8,16 +8,16 @@ import (
 
 	"cb_grok/internal/candle"
 	"cb_grok/internal/exchange"
+	candle_model "cb_grok/internal/models/candle"
 	model "cb_grok/internal/models/strategy"
 	"cb_grok/internal/order"
 	"cb_grok/internal/strategy"
 	"cb_grok/internal/trader"
-	"cb_grok/pkg/models"
 	"cb_grok/pkg/telegram"
 )
 
 type Backtest interface {
-	Run(candles []models.OHLCV, mod *model.StrategyFileModel) (*BacktestResult, error)
+	Run(candles []candle_model.OHLCV, mod *model.StrategyFileModel) (*BacktestResult, error)
 }
 
 type backtest struct {
@@ -51,7 +51,7 @@ func NewBacktest(log *zap.Logger, tg *telegram.TelegramService, orderUC order.Us
 	}
 }
 
-func (b *backtest) Run(ohlcv []models.OHLCV, mod *model.StrategyFileModel) (*BacktestResult, error) {
+func (b *backtest) Run(ohlcv []candle_model.OHLCV, mod *model.StrategyFileModel) (*BacktestResult, error) {
 	str := strategy.NewLinearBiasStrategy()
 
 	trade := trader.NewTrader(b.log, b.tg, b.orderUC, b.candleRepo)
@@ -80,7 +80,7 @@ func (b *backtest) Run(ohlcv []models.OHLCV, mod *model.StrategyFileModel) (*Bac
 		}
 	}
 
-	var valCandles []models.AppliedOHLCV
+	var valCandles []candle_model.AppliedOHLCV
 
 	for i := 0; i < len(appliedCandles); i++ {
 		valCandles = append(valCandles, appliedCandles[i])

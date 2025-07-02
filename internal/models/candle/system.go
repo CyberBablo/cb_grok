@@ -1,4 +1,4 @@
-package models
+package candle
 
 type OHLCV struct {
 	Timestamp int64   `json:"timestamp"`

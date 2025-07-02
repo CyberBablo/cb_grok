@@ -2,9 +2,9 @@ package trader
 
 import (
 	"cb_grok/internal/exchange"
+	candle_model "cb_grok/internal/models/candle"
 	strategy_model "cb_grok/internal/models/strategy"
 	"cb_grok/internal/strategy"
-	"cb_grok/pkg/models"
 )
 
 type TraderParams struct {
@@ -26,8 +26,8 @@ type TraderSettings struct {
 type state struct {
 	initialCapital float64
 
-	ohlcv           []models.OHLCV
-	appliedOHLCV    []models.AppliedOHLCV
+	ohlcv           []candle_model.OHLCV
+	appliedOHLCV    []candle_model.AppliedOHLCV
 	orders          []Action
 	portfolioValues []PortfolioValue
 }
