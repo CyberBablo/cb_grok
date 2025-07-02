@@ -1,7 +1,7 @@
 package strategy
 
 import (
-	"cb_grok/internal/indicators"
+	"cb_grok/pkg/indicators"
 	"cb_grok/pkg/models"
 	"go.uber.org/zap"
 	"math"
