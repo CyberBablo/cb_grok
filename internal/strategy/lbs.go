@@ -3,7 +3,7 @@ package strategy
 import (
 	candle_model "cb_grok/internal/models/candle"
 	strategy_model "cb_grok/internal/models/strategy"
-	"cb_grok/pkg/indicators"
+	"cb_grok/internal/pkg/indicators"
 	"go.uber.org/zap"
 	"math"
 )

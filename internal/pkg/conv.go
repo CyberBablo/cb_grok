@@ -1,4 +1,4 @@
-package utils
+package pkg
 
 func BoolToInt(v bool) int {
 	if v {

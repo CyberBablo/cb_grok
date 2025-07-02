@@ -6,8 +6,8 @@ import (
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/exchange/bybit"
 	strategy_model "cb_grok/internal/models/strategy"
+	"cb_grok/internal/pkg"
 	"cb_grok/internal/trader"
-	"cb_grok/internal/utils"
 	"cb_grok/pkg/logger"
 	"cb_grok/pkg/telegram"
 	"context"
@@ -95,7 +95,7 @@ func runBacktest(cfg *config.Config, backtest backtest.Backtest, tg *telegram.Te
 		return fmt.Errorf("error to load model: %w", err)
 	}
 
-	timeframeSec := utils.TimeframeToMilliseconds(timeframe) / 1000
+	timeframeSec := pkg.TimeframeToMilliseconds(timeframe) / 1000
 	candlesPerDay := (24 * 60 * 60) / int(timeframeSec)
 
 	candlesTotal := setDays * candlesPerDay

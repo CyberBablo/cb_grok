@@ -13,7 +13,7 @@ import (
 
 	"cb_grok/internal/exchange"
 	candle_model "cb_grok/internal/models/candle"
-	"cb_grok/internal/utils"
+	"cb_grok/internal/pkg"
 )
 
 func (b *bybit) FetchSpotOHLCV(symbol string, timeframe exchange.Timeframe, total int) ([]candle_model.OHLCV, error) {
@@ -104,7 +104,7 @@ func (b *bybit) FetchSpotOHLCV(symbol string, timeframe exchange.Timeframe, tota
 			return nil, fmt.Errorf("failed to parse last candle timestamp: %w", err)
 		}
 
-		since = startTimestamp - (int64(limit) * utils.TimeframeToMilliseconds(string(timeframe)))
+		since = startTimestamp - (int64(limit) * pkg.TimeframeToMilliseconds(string(timeframe)))
 
 		zap.L().Info(fmt.Sprintf("fetched ohlcv: %d/%d", len(candles), total))
 

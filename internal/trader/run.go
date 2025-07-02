@@ -5,7 +5,7 @@ import (
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/exchange/bybit"
 	candle_model "cb_grok/internal/models/candle"
-	"cb_grok/internal/utils"
+	"cb_grok/internal/pkg"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -28,7 +28,7 @@ func (t *trader) Run(mode TradeMode, timeframe string) error {
 		return fmt.Errorf("unsupported trade mode")
 	}
 
-	timeframeSec := utils.TimeframeToMilliseconds(timeframe) / 1000
+	timeframeSec := pkg.TimeframeToMilliseconds(timeframe) / 1000
 	candlesPerDay := (24 * 60 * 60) / int(timeframeSec)
 
 	totalCandles := 60 * candlesPerDay

@@ -19,7 +19,7 @@ import (
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/exchange/bybit"
 	strategy_model "cb_grok/internal/models/strategy"
-	"cb_grok/internal/utils"
+	"cb_grok/internal/pkg"
 	"cb_grok/pkg/telegram"
 )
 
@@ -49,7 +49,7 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 		return err
 	}
 
-	timeframeSec := utils.TimeframeToMilliseconds(params.Timeframe) / 1000
+	timeframeSec := pkg.TimeframeToMilliseconds(params.Timeframe) / 1000
 	timePeriodMultiplier := float64(60 * 60 / timeframeSec)
 	candlesPerDay := (24 * 60 * 60) / int(timeframeSec)
 

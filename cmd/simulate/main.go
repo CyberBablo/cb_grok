@@ -4,7 +4,7 @@ import (
 	"cb_grok/config"
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/exchange/bybit"
-	"cb_grok/internal/utils"
+	"cb_grok/internal/pkg"
 	"cb_grok/pkg/logger"
 	"context"
 	"encoding/json"
@@ -102,7 +102,7 @@ func runServer(symbol string, timeframe string, tradingDays int, log *zap.Logger
 		return err
 	}
 
-	timeframeSec := utils.TimeframeToMilliseconds(timeframe) / 1000
+	timeframeSec := pkg.TimeframeToMilliseconds(timeframe) / 1000
 	candlesPerDay := (24 * 60 * 60) / int(timeframeSec)
 
 	totalCandles := tradingDays * candlesPerDay
