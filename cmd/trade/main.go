@@ -13,7 +13,7 @@ import (
 	orderUsecase "cb_grok/internal/order/usecase"
 	"cb_grok/internal/strategy"
 	"cb_grok/internal/trader"
-	"cb_grok/internal/utils/logger"
+	"cb_grok/pkg/logger"
 	"cb_grok/pkg/postgres"
 	"cb_grok/pkg/telegram"
 	"context"

@@ -2,7 +2,7 @@ package ohlc
 
 import (
 	"cb_grok/internal/exchange/bybit"
-	"cb_grok/internal/utils/logger"
+	"cb_grok/pkg/logger"
 	"cb_grok/pkg/models"
 	"fmt"
 	"github.com/go-echarts/go-echarts/v2/charts"

@@ -4,7 +4,7 @@ import (
 	"cb_grok/config"
 	"cb_grok/internal/candle"
 	candleRepository "cb_grok/internal/candle/repository"
-	"cb_grok/internal/utils/logger"
+	"cb_grok/pkg/logger"
 	"cb_grok/pkg/models"
 	"cb_grok/pkg/postgres"
 	"context"

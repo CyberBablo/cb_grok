@@ -9,13 +9,12 @@ import (
 	"cb_grok/internal/order"
 	orderRepository "cb_grok/internal/order/repository"
 	orderUsecase "cb_grok/internal/order/usecase"
-	"cb_grok/internal/utils/logger"
+	"cb_grok/pkg/logger"
 	"cb_grok/pkg/postgres"
 	"cb_grok/pkg/telegram"
 	"context"
 	"flag"
 	"fmt"
-	"github.com/ethereum/go-ethereum/log"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
@@ -97,7 +96,7 @@ func main() {
 	app.Run()
 }
 
-func runOptimize(cfg *config.Config, opt optimize.Optimize) error {
+func runOptimize(cfg *config.Config, opt optimize.Optimize, log *zap.Logger) error {
 	log.Info("Starting optimize",
 		zap.String("version", cfg.App.Version),
 		zap.String("environment", cfg.App.Environment),
@@ -148,7 +147,7 @@ func registerLifecycleHooks(
 
 			exitCode := 0
 			go func() {
-				err := runOptimize(cfg, opt)
+				err := runOptimize(cfg, opt, log)
 				if err != nil {
 					log.Error("Failed to run optimize", zap.Error(err))
 					exitCode = 1

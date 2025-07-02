@@ -7,7 +7,6 @@ require (
 	github.com/c-bata/goptuna v0.9.0
 	github.com/cinar/indicator v1.3.0
 	github.com/dnlo/struct2csv v0.0.0-20190928115744-2f584471b24e
-	github.com/ethereum/go-ethereum v1.15.7
 	github.com/georgysavva/scany v1.2.3
 	github.com/go-echarts/go-echarts/v2 v2.5.3
 	github.com/google/uuid v1.6.0
@@ -28,7 +27,6 @@ require (
 
 require (
 	github.com/bitly/go-simplejson v0.5.1 // indirect
-	github.com/holiman/uint256 v1.3.2 // indirect
 	github.com/iancoleman/strcase v0.3.0 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
@@ -39,15 +37,18 @@ require (
 	github.com/jackc/pgtype v1.14.0 // indirect
 	github.com/jackc/puddle v1.3.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/kr/pretty v0.3.1 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/mitchellh/hashstructure v1.1.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	go.uber.org/dig v1.18.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/crypto v0.35.0 // indirect
+	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/term v0.29.0 // indirect
 	golang.org/x/text v0.22.0 // indirect

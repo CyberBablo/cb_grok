@@ -8,12 +8,11 @@ import (
 	"cb_grok/internal/model"
 	"cb_grok/internal/trader"
 	"cb_grok/internal/utils"
-	"cb_grok/internal/utils/logger"
+	"cb_grok/pkg/logger"
 	"cb_grok/pkg/telegram"
 	"context"
 	"flag"
 	"fmt"
-	"github.com/ethereum/go-ethereum/log"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
@@ -71,7 +70,7 @@ func main() {
 	app.Run()
 }
 
-func runBacktest(cfg *config.Config, backtest backtest.Backtest, tg *telegram.TelegramService) error {
+func runBacktest(cfg *config.Config, backtest backtest.Backtest, tg *telegram.TelegramService, log *zap.Logger) error {
 
 	var (
 		modelFilename string
@@ -103,17 +102,17 @@ func runBacktest(cfg *config.Config, backtest backtest.Backtest, tg *telegram.Te
 
 	candles, err := ex.FetchSpotOHLCV(mod.Symbol, exchange.Timeframe(timeframe), candlesTotal)
 	if err != nil {
-		zap.L().Error("backtest: fetch ohlcv", zap.Error(err))
+		log.Error("backtest: fetch ohlcv", zap.Error(err))
 		return err
 	}
 
 	result, err := backtest.Run(candles, mod)
 	if err != nil {
-		zap.L().Error("backtest: run backtest", zap.Error(err))
+		log.Error("backtest: run backtest", zap.Error(err))
 		return err
 	}
 
-	zap.L().Info("backtest completed")
+	log.Info("backtest completed")
 
 	msg := fmt.Sprintf(
 		"Результат бектеста:\n\nМодель: %s\nСимвол: %s\nTimeframe: %s\nКол-во свечей: %d\nКол-во дней на валидации: %d\nКоличество сделок: %d\nSharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%",
@@ -122,16 +121,16 @@ func runBacktest(cfg *config.Config, backtest backtest.Backtest, tg *telegram.Te
 	time.Sleep(1000 * time.Millisecond)
 	chartBuff, err := result.TradeState.GenerateCharts()
 	if err != nil {
-		zap.L().Error("report: generate charts", zap.Error(err))
+		log.Error("report: generate charts", zap.Error(err))
 	}
 
 	err = tg.SendFile(chartBuff, "html", msg)
 	if err != nil {
-		zap.L().Error("report: send to telegram", zap.Error(err))
+		log.Error("report: send to telegram", zap.Error(err))
 	}
 	time.Sleep(1000 * time.Millisecond)
 
-	zap.L().Info("report sent to Telegram")
+	log.Info("report sent to Telegram")
 
 	return nil
 
@@ -155,7 +154,7 @@ func registerLifecycleHooks(
 
 			exitCode := 0
 			go func() {
-				err := runBacktest(cfg, backtest, tg)
+				err := runBacktest(cfg, backtest, tg, log)
 				if err != nil {
 					log.Error("Failed to run backtest", zap.Error(err))
 					exitCode = 1

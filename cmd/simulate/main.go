@@ -5,12 +5,11 @@ import (
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/exchange/bybit"
 	"cb_grok/internal/utils"
-	"cb_grok/internal/utils/logger"
+	"cb_grok/pkg/logger"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/gorilla/websocket"
 	"github.com/schollz/progressbar/v3"
 	"go.uber.org/fx"
@@ -70,7 +69,7 @@ func main() {
 	app.Run()
 }
 
-func runSimulation() error {
+func runSimulation(log *zap.Logger) error {
 	var (
 		symbol      string
 		timeframe   string
@@ -83,8 +82,8 @@ func runSimulation() error {
 
 	log.Info("starting ws server", zap.String("symbol", symbol), zap.String("timeframe", timeframe), zap.Int("trading-days", tradingDays))
 
-	if err := runServer(symbol, timeframe, tradingDays); err != nil {
-		zap.L().Error(fmt.Sprintf("run ws server error: %s", err.Error()), zap.String("symbol", symbol), zap.String("timeframe", timeframe), zap.Int("trading-days", tradingDays))
+	if err := runServer(symbol, timeframe, tradingDays, log); err != nil {
+		log.Error(fmt.Sprintf("run ws server error: %s", err.Error()), zap.String("symbol", symbol), zap.String("timeframe", timeframe), zap.Int("trading-days", tradingDays))
 		return err
 	}
 
@@ -92,7 +91,7 @@ func runSimulation() error {
 }
 
 // Server function - Entry point 1
-func runServer(symbol string, timeframe string, tradingDays int) error {
+func runServer(symbol string, timeframe string, tradingDays int, log *zap.Logger) error {
 	var upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
@@ -118,7 +117,7 @@ func runServer(symbol string, timeframe string, tradingDays int) error {
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			zap.S().Errorf("simulation server: upgrade error: %s", err.Error())
+			log.Error("simulation server: upgrade error", zap.Error(err))
 			return
 		}
 		defer conn.Close()
@@ -131,7 +130,7 @@ func runServer(symbol string, timeframe string, tradingDays int) error {
 			}
 			err = conn.WriteMessage(websocket.TextMessage, d)
 			if err != nil {
-				zap.S().Errorf("simulation server: write message error: %s", err.Error())
+				log.Error("simulation server: write message error", zap.Error(err))
 				return
 			}
 			bar.Add(1)
@@ -143,12 +142,12 @@ func runServer(symbol string, timeframe string, tradingDays int) error {
 		closeMsg := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Simulation completed")
 		err = conn.WriteMessage(websocket.CloseMessage, closeMsg)
 		if err != nil {
-			zap.S().Errorf("simulation server: failed to send close message: %s", err.Error())
+			log.Error("simulation server: failed to send close message", zap.Error(err))
 		}
 		log.Info("Simulation completed, connection closed")
 	})
 
-	zap.S().Infof("Starting WebSocket server on %s", wsAddr)
+	log.Info("Starting WebSocket server", zap.String("address", wsAddr))
 	err = http.ListenAndServe(wsAddr, nil)
 	if err != nil {
 		return err
@@ -173,7 +172,7 @@ func registerLifecycleHooks(
 
 			exitCode := 0
 			go func() {
-				err := runSimulation()
+				err := runSimulation(log)
 				if err != nil {
 					log.Error("Failed to run optimize", zap.Error(err))
 					exitCode = 1
