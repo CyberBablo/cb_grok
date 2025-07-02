@@ -1,69 +1,101 @@
+// Package metrics provides functionality to generate realistic trading metrics data
+// for testing and development purposes.
 package metrics
 
 import (
-	"cb_grok/config"
-	"cb_grok/internal/metrics"
-	"cb_grok/internal/metrics/repository"
-	metrics_model "cb_grok/internal/models/metrics"
-	"cb_grok/pkg/postgres"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/google/uuid"
-	"go.uber.org/zap"
 	"math"
 	"math/rand"
 	"os"
 	"time"
+
+	"github.com/google/uuid"
+	"go.uber.org/fx"
+	"go.uber.org/fx/fxevent"
+	"go.uber.org/zap"
+
+	"cb_grok/config"
+	"cb_grok/internal/metrics"
+	"cb_grok/internal/metrics/repository"
+	metrics_model "cb_grok/internal/models/metrics"
+	"cb_grok/pkg/logger"
+	"cb_grok/pkg/postgres"
 )
 
-func CMD() {
-	var (
-		symbol = flag.String("symbol", "BTCUSDT", "Trading symbol")
-		days   = flag.Int("days", 30, "Number of days to generate data for")
-		trades = flag.Int("trades", 100, "Number of trades to generate")
-	)
-	flag.Parse()
+// MetricsParams holds the command line parameters for metrics operations.
+type MetricsParams struct {
+	Symbol         string
+	Days           int
+	Trades         int
+	Environment    string
+	StrategyType   string
+	InitialCapital float64
+}
 
-	logger, _ := zap.NewDevelopment()
-	defer logger.Sync()
+// CMD runs the metrics generation command with FX dependency injection.
+func CMD() {
+	// Parse command line flags
+	params := parseMetricsFlags()
 
 	// Load configuration
-
 	configPath := os.Getenv("CONFIG_PATH")
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
-		logger.Fatal("Failed to load config", zap.Error(err))
+		fmt.Printf("Failed to load config: %v\n", err)
+		os.Exit(1)
 	}
 
-	// Initialize database
-	db, err := postgres.InitPsqlDB(&postgres.Conn{
-		Host:     cfg.PostgresMetrics.Host,
-		Port:     cfg.PostgresMetrics.Port,
-		User:     cfg.PostgresMetrics.User,
-		Password: cfg.PostgresMetrics.Password,
-		DBName:   cfg.PostgresMetrics.DBName,
-		SSLMode:  cfg.PostgresMetrics.SSLMode,
-		PgDriver: cfg.PostgresMetrics.PgDriver,
-	})
-	if err != nil {
-		logger.Fatal("Failed to connect to database", zap.Error(err))
-	}
+	// Create FX application
+	app := fx.New(
+		// Provide configuration
+		fx.Provide(func() *config.Config { return cfg }),
+		fx.Provide(func() MetricsParams { return params }),
 
-	repo := repository.New(db)
+		// Provide logger
+		fx.Provide(func(cfg *config.Config) (*zap.Logger, error) {
+			return logger.NewZapLogger(logger.ZapConfig{
+				Level:        cfg.Logger.Level,
+				Development:  cfg.Logger.Development,
+				Encoding:     cfg.Logger.Encoding,
+				OutputPaths:  cfg.Logger.OutputPaths,
+				FileLog:      cfg.Logger.FileLog,
+				FilePath:     cfg.Logger.FilePath,
+				FileMaxSize:  cfg.Logger.FileMaxSize,
+				FileCompress: cfg.Logger.FileCompress,
+			})
+		}),
 
-	logger.Info("Starting metrics population",
-		zap.String("symbol", *symbol),
-		zap.Int("days", *days),
-		zap.Int("trades", *trades))
+		// Provide database connection
+		fx.Provide(func(cfg *config.Config) (postgres.Postgres, error) {
+			return postgres.InitPsqlDB(&postgres.Conn{
+				Host:     cfg.PostgresMetrics.Host,
+				Port:     cfg.PostgresMetrics.Port,
+				User:     cfg.PostgresMetrics.User,
+				Password: cfg.PostgresMetrics.Password,
+				DBName:   cfg.PostgresMetrics.DBName,
+				SSLMode:  cfg.PostgresMetrics.SSLMode,
+				PgDriver: cfg.PostgresMetrics.PgDriver,
+			})
+		}),
 
-	// Generate data
-	if err := populateMetrics(repo, *symbol, *days, *trades, logger); err != nil {
-		logger.Fatal("Failed to populate metrics", zap.Error(err))
-	}
+		// Provide metrics repository
+		fx.Provide(func(db postgres.Postgres) metrics.Repository {
+			return repository.New(db)
+		}),
 
-	logger.Info("Metrics population completed successfully")
+		// Lifecycle management
+		fx.Invoke(runMetricsOperation),
+
+		// FX logger
+		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
+			return &fxevent.ZapLogger{Logger: log}
+		}),
+	)
+
+	app.Run()
 }
 
 func populateMetrics(repo metrics.Repository, symbol string, days, trades int, logger *zap.Logger) error {
@@ -309,4 +341,76 @@ func generateIndicators(price float64, timestamp time.Time) map[string]float64 {
 		"UpperBB":     price * (1.02 + 0.01*math.Abs(math.Sin(day/8))), // Above price
 		"LowerBB":     price * (0.98 - 0.01*math.Abs(math.Sin(day/8))), // Below price
 	}
+}
+
+// parseMetricsFlags parses command line flags and returns MetricsParams.
+func parseMetricsFlags() MetricsParams {
+	var (
+		symbol   = flag.String("symbol", "BTCUSDT", "Trading symbol (e.g., BTCUSDT, ETHUSDT)")
+		days     = flag.Int("days", 30, "Number of days to generate historical data for")
+		trades   = flag.Int("trades", 100, "Number of trades to generate")
+		env      = flag.String("env", "demo", "Environment for the strategy run (demo, backtest, live)")
+		strategy = flag.String("strategy", "demo_strategy", "Strategy type name")
+		capital  = flag.Float64("capital", 10000.0, "Initial capital amount")
+	)
+	flag.Parse()
+
+	return MetricsParams{
+		Symbol:         *symbol,
+		Days:           *days,
+		Trades:         *trades,
+		Environment:    *env,
+		StrategyType:   *strategy,
+		InitialCapital: *capital,
+	}
+}
+
+// runMetricsOperation is the main FX lifecycle function that executes metrics operations.
+func runMetricsOperation(
+	lifecycle fx.Lifecycle,
+	log *zap.Logger,
+	metricsRepo metrics.Repository,
+	params MetricsParams,
+	shutdowner fx.Shutdowner,
+) {
+	lifecycle.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			log.Info("Starting metrics generation with FX",
+				zap.String("symbol", params.Symbol),
+				zap.Int("days", params.Days),
+				zap.Int("trades", params.Trades),
+				zap.String("environment", params.Environment),
+				zap.String("strategy", params.StrategyType),
+				zap.Float64("initial_capital", params.InitialCapital))
+
+			go func() {
+				defer shutdowner.Shutdown()
+
+				// Execute metrics generation
+				err := populateMetrics(metricsRepo, params.Symbol, params.Days, params.Trades, log)
+				if err != nil {
+					log.Error("Metrics generation failed", zap.Error(err))
+					return
+				}
+
+				log.Info("✅ Metrics generation completed successfully")
+			}()
+
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			log.Info("Metrics generation completed")
+			return nil
+		},
+	})
+}
+
+// MetricsGenerationParams holds parameters for metrics data generation.
+type MetricsGenerationParams struct {
+	Symbol         string
+	Days           int
+	Trades         int
+	Environment    string
+	StrategyType   string
+	InitialCapital float64
 }

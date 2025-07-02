@@ -1,12 +1,8 @@
+// Package candle provides functionality to generate, query, and manage candle data
+// for testing and development purposes.
 package candle
 
 import (
-	"cb_grok/config"
-	"cb_grok/internal/candle"
-	candleRepository "cb_grok/internal/candle/repository"
-	candle_model "cb_grok/internal/models/candle"
-	"cb_grok/pkg/logger"
-	"cb_grok/pkg/postgres"
 	"context"
 	"flag"
 	"fmt"
@@ -17,24 +13,44 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
+
+	"cb_grok/config"
+	"cb_grok/internal/candle"
+	candleRepository "cb_grok/internal/candle/repository"
+	candle_model "cb_grok/internal/models/candle"
+	"cb_grok/pkg/logger"
+	"cb_grok/pkg/postgres"
 )
 
-func CMD() {
-	configPath := os.Getenv("CONFIG_PATH")
+// CandleParams holds the command line parameters for candle operations.
+type CandleParams struct {
+	Operation string
+	Symbol    string
+	Exchange  string
+	Timeframe string
+	Count     int
+}
 
+// CMD runs the candle management command with FX dependency injection.
+func CMD() {
+	// Parse command line flags
+	params := parseCandleFlags()
+
+	// Load configuration
+	configPath := os.Getenv("CONFIG_PATH")
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		fmt.Printf("Failed to load config: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Println(cfg.Postgres)
-
+	// Create FX application
 	app := fx.New(
-		// Configuration
+		// Provide configuration
 		fx.Provide(func() *config.Config { return cfg }),
+		fx.Provide(func() CandleParams { return params }),
 
-		// Logger
+		// Provide logger
 		fx.Provide(func(cfg *config.Config) (*zap.Logger, error) {
 			return logger.NewZapLogger(logger.ZapConfig{
 				Level:        cfg.Logger.Level,
@@ -48,7 +64,7 @@ func CMD() {
 			})
 		}),
 
-		// Postgres
+		// Provide database connection
 		fx.Provide(func(cfg *config.Config) (postgres.Postgres, error) {
 			return postgres.InitPsqlDB(&postgres.Conn{
 				Host:     cfg.PostgresMetrics.Host,
@@ -61,15 +77,15 @@ func CMD() {
 			})
 		}),
 
-		// Candle repository
+		// Provide candle repository
 		fx.Provide(func(db postgres.Postgres) candle.Repository {
 			return candleRepository.New(db)
 		}),
 
-		// Lifecycle hooks
-		fx.Invoke(runCandleTest),
+		// Lifecycle management
+		fx.Invoke(runCandleOperation),
 
-		// FX settings
+		// FX logger
 		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
 			return &fxevent.ZapLogger{Logger: log}
 		}),
@@ -78,67 +94,83 @@ func CMD() {
 	app.Run()
 }
 
-func runCandleTest(
+// parseCandleFlags parses command line flags and returns CandleParams.
+func parseCandleFlags() CandleParams {
+	var (
+		operation = flag.String("op", "generate", "Operation: generate, query, delete")
+		symbol    = flag.String("symbol", "BTCUSDT", "Trading symbol (e.g., BTCUSDT, ETHUSDT)")
+		exchange  = flag.String("exchange", "bybit", "Exchange name")
+		timeframe = flag.String("timeframe", "1m", "Timeframe (1m, 5m, 15m, 1h, etc.)")
+		count     = flag.Int("count", 100, "Number of candles to generate/query")
+	)
+	flag.Parse()
+
+	return CandleParams{
+		Operation: *operation,
+		Symbol:    *symbol,
+		Exchange:  *exchange,
+		Timeframe: *timeframe,
+		Count:     *count,
+	}
+}
+
+// runCandleOperation is the main FX lifecycle function that executes candle operations.
+func runCandleOperation(
 	lifecycle fx.Lifecycle,
 	log *zap.Logger,
 	candleRepo candle.Repository,
+	params CandleParams,
 	shutdowner fx.Shutdowner,
 ) {
 	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			var (
-				operation string
-				symbol    string
-				exchange  string
-				timeframe string
-				count     int
-			)
-
-			flag.StringVar(&operation, "op", "generate", "Operation: generate, query, delete")
-			flag.StringVar(&symbol, "symbol", "BTCUSDT", "Trading symbol")
-			flag.StringVar(&exchange, "exchange", "bybit", "Exchange name")
-			flag.StringVar(&timeframe, "timeframe", "1m", "Timeframe")
-			flag.IntVar(&count, "count", 100, "Number of candles to generate")
-			flag.Parse()
+			log.Info("Starting candle operation with FX",
+				zap.String("operation", params.Operation),
+				zap.String("symbol", params.Symbol),
+				zap.String("exchange", params.Exchange),
+				zap.String("timeframe", params.Timeframe),
+				zap.Int("count", params.Count))
 
 			go func() {
 				defer shutdowner.Shutdown()
 
-				switch operation {
+				// Execute the requested operation
+				var err error
+				switch params.Operation {
 				case "generate":
-					err := generateAndSaveCandles(ctx, log, candleRepo, symbol, exchange, timeframe, count)
-					if err != nil {
-						log.Error("Failed to generate candles", zap.Error(err))
-					}
-
+					err = generateCandles(ctx, candleRepo, params.Symbol, params.Exchange, params.Timeframe, params.Count, log)
 				case "query":
-					err := queryCandles(ctx, log, candleRepo, symbol, exchange, timeframe)
-					if err != nil {
-						log.Error("Failed to query candles", zap.Error(err))
-					}
-
+					err = queryCandles(ctx, candleRepo, params.Symbol, params.Exchange, params.Timeframe, log)
 				case "delete":
-					err := deleteCandles(ctx, log, candleRepo, symbol, exchange, timeframe)
-					if err != nil {
-						log.Error("Failed to delete candles", zap.Error(err))
-					}
-
+					err = deleteCandles(ctx, candleRepo, params.Symbol, params.Exchange, params.Timeframe, log)
 				default:
-					log.Error("Unknown operation", zap.String("operation", operation))
+					log.Error("Unknown operation", zap.String("operation", params.Operation))
+					return
 				}
+
+				if err != nil {
+					log.Error("Operation failed",
+						zap.String("operation", params.Operation),
+						zap.Error(err))
+					return
+				}
+
+				log.Info("✅ Operation completed successfully",
+					zap.String("operation", params.Operation))
 			}()
 
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			log.Info("Candle test completed")
+			log.Info("Candle operation completed")
 			return nil
 		},
 	})
 }
 
-func generateAndSaveCandles(ctx context.Context, log *zap.Logger, repo candle.Repository, symbol, exchange, timeframe string, count int) error {
-	log.Info("Generating and saving candles",
+// generateCandles generates and saves realistic candle data.
+func generateCandles(ctx context.Context, repo candle.Repository, symbol, exchange, timeframe string, count int, log *zap.Logger) error {
+	log.Info("Generating candles",
 		zap.String("symbol", symbol),
 		zap.String("exchange", exchange),
 		zap.String("timeframe", timeframe),
@@ -149,62 +181,32 @@ func generateAndSaveCandles(ctx context.Context, log *zap.Logger, repo candle.Re
 	interval := getTimeframeInterval(timeframe)
 
 	// Generate realistic OHLCV data
-	basePrice := 50000.0 // Base price for BTC
-	if symbol != "BTCUSDT" {
-		basePrice = 100.0 // Default for other symbols
-	}
+	basePrice := getBasePriceForSymbol(symbol)
+	rand.Seed(time.Now().UnixNano())
 
-	candles := make([]candle_model.OHLCV, count)
-
+	successCount := 0
 	for i := 0; i < count; i++ {
 		// Calculate timestamp for this candle
 		candleTime := endTime.Add(-time.Duration(count-i-1) * interval)
 		timestamp := candleTime.Unix() * 1000 // Convert to milliseconds
 
 		// Generate realistic OHLCV values
-		volatility := 0.002 // 0.2% volatility
-		open := basePrice * (1 + (rand.Float64()-0.5)*volatility)
+		candleData := generateRealisticOHLCV(basePrice, timestamp)
 
-		// Generate high and low
-		highOffset := rand.Float64() * volatility * basePrice
-		lowOffset := rand.Float64() * volatility * basePrice
-		high := open + highOffset
-		low := open - lowOffset
-
-		// Close should be between high and low
-		close := low + rand.Float64()*(high-low)
-
-		// Volume in base currency
-		volume := 100 + rand.Float64()*900 // Between 100 and 1000
-
-		candles[i] = candle_model.OHLCV{
-			Timestamp: timestamp,
-			Open:      open,
-			High:      high,
-			Low:       low,
-			Close:     close,
-			Volume:    volume,
-		}
-
-		// Update base price for next candle
-		basePrice = close
-	}
-
-	// Save candles one by one
-	successCount := 0
-	for i, candle := range candles {
-		err := repo.Create(ctx, symbol, exchange, timeframe, candle)
-		if err != nil {
+		// Save candle
+		if err := repo.Create(ctx, symbol, exchange, timeframe, candleData); err != nil {
 			log.Error("Failed to save candle",
 				zap.Error(err),
 				zap.Int("index", i),
-				zap.Int64("timestamp", candle.Timestamp))
+				zap.Int64("timestamp", candleData.Timestamp))
 			continue
 		}
-		successCount++
 
-		if (i+1)%10 == 0 {
-			log.Info("Progress", zap.Int("saved", i+1), zap.Int("total", count))
+		successCount++
+		basePrice = candleData.Close // Update base price for next candle
+
+		if (i+1)%25 == 0 {
+			log.Info("Generation progress", zap.Int("completed", i+1), zap.Int("total", count))
 		}
 	}
 
@@ -215,7 +217,8 @@ func generateAndSaveCandles(ctx context.Context, log *zap.Logger, repo candle.Re
 	return nil
 }
 
-func queryCandles(ctx context.Context, log *zap.Logger, repo candle.Repository, symbol, exchange, timeframe string) error {
+// queryCandles retrieves and displays candle data.
+func queryCandles(ctx context.Context, repo candle.Repository, symbol, exchange, timeframe string, log *zap.Logger) error {
 	log.Info("Querying candles",
 		zap.String("symbol", symbol),
 		zap.String("exchange", exchange),
@@ -257,34 +260,37 @@ func queryCandles(ctx context.Context, log *zap.Logger, repo candle.Repository, 
 	return nil
 }
 
-func deleteCandles(ctx context.Context, log *zap.Logger, repo candle.Repository, symbol, exchange, timeframe string) error {
-	log.Info("Deleting candles",
+// deleteCandles removes old candle data (safety limited to >1 hour old).
+func deleteCandles(ctx context.Context, repo candle.Repository, symbol, exchange, timeframe string, log *zap.Logger) error {
+	log.Info("Checking candles for deletion",
 		zap.String("symbol", symbol),
 		zap.String("exchange", exchange),
 		zap.String("timeframe", timeframe))
 
-	// For safety, only delete test data older than 1 hour
+	// For safety, only query test data older than 1 hour
 	endTime := time.Now().Add(-1*time.Hour).Unix() * 1000
-	startTime := 0 // From beginning of time
+	startTime := int64(0) // From beginning of time
 
-	// First, query to see what we're about to delete
-	candles, err := repo.Select(ctx, symbol, exchange, timeframe, int64(startTime), endTime)
+	// First, query to see what we would delete
+	candles, err := repo.Select(ctx, symbol, exchange, timeframe, startTime, endTime)
 	if err != nil {
 		return fmt.Errorf("failed to query candles before deletion: %w", err)
 	}
 
-	log.Warn("About to delete candles",
+	log.Warn("Candles that would be deleted",
 		zap.Int("count", len(candles)),
 		zap.String("symbol", symbol),
 		zap.String("exchange", exchange),
 		zap.String("timeframe", timeframe))
 
 	// Note: The current repository doesn't have a Delete method, so we'll just log what we would delete
-	log.Info("Delete operation would remove the above candles (not implemented in repository)")
+	log.Info("Delete operation simulation completed (no actual deletion performed)")
+	log.Info("To implement actual deletion, add a Delete method to the candle repository")
 
 	return nil
 }
 
+// getTimeframeInterval converts timeframe string to time.Duration.
 func getTimeframeInterval(timeframe string) time.Duration {
 	switch timeframe {
 	case "1m":
@@ -313,5 +319,62 @@ func getTimeframeInterval(timeframe string) time.Duration {
 		return 7 * 24 * time.Hour
 	default:
 		return time.Minute
+	}
+}
+
+// getBasePriceForSymbol returns a realistic base price for different symbols.
+func getBasePriceForSymbol(symbol string) float64 {
+	switch symbol {
+	case "BTCUSDT":
+		return 50000.0
+	case "ETHUSDT":
+		return 3000.0
+	case "BNBUSDT":
+		return 400.0
+	case "ADAUSDT":
+		return 1.0
+	case "DOGEUSDT":
+		return 0.25
+	default:
+		return 100.0 // Default price
+	}
+}
+
+// generateRealisticOHLCV creates realistic OHLCV data with proper relationships.
+func generateRealisticOHLCV(basePrice float64, timestamp int64) candle_model.OHLCV {
+	// Generate realistic price movement (±2% volatility)
+	volatility := 0.002
+	priceChange := (rand.Float64() - 0.5) * volatility
+	open := basePrice * (1 + priceChange)
+
+	// Generate high and low with realistic spreads
+	highOffset := rand.Float64() * volatility * basePrice * 0.5
+	lowOffset := rand.Float64() * volatility * basePrice * 0.5
+	high := open + highOffset
+	low := open - lowOffset
+
+	// Ensure high >= open and low <= open
+	if high < open {
+		high = open
+	}
+	if low > open {
+		low = open
+	}
+
+	// Close should be between high and low
+	close := low + rand.Float64()*(high-low)
+
+	// Generate realistic volume
+	baseVolume := 100.0
+	volumeVariation := 1.0 + (rand.Float64()-0.5)*0.8 // ±40% variation
+	volume := baseVolume * volumeVariation
+
+	return candle_model.OHLCV{
+		Timestamp: timestamp,
+		Open:      open,
+		High:      high,
+		Low:       low,
+		Close:     close,
+		Volume:    volume,
 	}
 }
