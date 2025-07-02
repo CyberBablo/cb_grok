@@ -7,8 +7,8 @@ import (
 	"cb_grok/internal/model"
 	"cb_grok/internal/order"
 	"cb_grok/internal/strategy"
-	"cb_grok/internal/telegram"
 	"cb_grok/pkg/models"
+	"cb_grok/pkg/telegram"
 	"sync"
 
 	"go.uber.org/zap"
