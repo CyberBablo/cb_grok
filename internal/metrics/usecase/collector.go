@@ -1,15 +1,17 @@
 package usecase
 
 import (
+	"cb_grok/internal/metrics"
 	"cb_grok/internal/metrics/repository"
 	"cb_grok/internal/trader"
 	"cb_grok/pkg/postgres"
+	"context"
 	"encoding/json"
 	"go.uber.org/zap"
 	"time"
 )
 
-// DBMetricsCollector collects metrics directly to PostgreSQL
+// DBMetricsCollector implements metrics.Collector interface and collects metrics directly to PostgreSQL
 type DBMetricsCollector struct {
 	state       trader.State
 	metricsRepo *repository.MetricsRepository
@@ -67,7 +69,7 @@ func (m *DBMetricsCollector) SaveTradeMetric(order trader.Action, indicators map
 	profit := order.Profit
 
 	decisionTrigger := string(order.DecisionTrigger)
-	metric := repository.TradeMetric{
+	metric := &metrics.TradeMetric{
 		Timestamp:       time.UnixMilli(order.Timestamp),
 		Symbol:          m.symbol,
 		Side:            string(order.Decision),
@@ -82,7 +84,7 @@ func (m *DBMetricsCollector) SaveTradeMetric(order trader.Action, indicators map
 		SharpeRatio:     &sharpeRatio,
 	}
 
-	return m.metricsRepo.SaveTradeMetric(metric)
+	return m.metricsRepo.SaveTradeMetric(context.Background(), metric)
 }
 
 func (m *DBMetricsCollector) Close() error {

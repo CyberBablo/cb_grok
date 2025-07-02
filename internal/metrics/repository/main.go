@@ -1,11 +1,14 @@
 package repository
 
 import (
+	"cb_grok/internal/metrics"
 	"cb_grok/pkg/postgres"
+	"context"
 	"encoding/json"
 	"time"
 )
 
+// MetricsRepository implements metrics.Repository interface
 type MetricsRepository struct {
 	db postgres.Postgres
 }
@@ -14,49 +17,7 @@ func NewMetricsRepository(db postgres.Postgres) *MetricsRepository {
 	return &MetricsRepository{db: db}
 }
 
-type TradeMetric struct {
-	ID              int64           `db:"id"`
-	Timestamp       time.Time       `db:"timestamp"`
-	Symbol          string          `db:"symbol"`
-	Side            string          `db:"side"`
-	Price           float64         `db:"price"`
-	Quantity        float64         `db:"quantity"`
-	Profit          *float64        `db:"profit"`
-	PortfolioValue  *float64        `db:"portfolio_value"`
-	StrategyParams  json.RawMessage `db:"strategy_params"`
-	Indicators      json.RawMessage `db:"indicators"`
-	DecisionTrigger *string         `db:"decision_trigger"`
-	SignalStrength  *float64        `db:"signal_strength"`
-	WinRate         *float64        `db:"win_rate"`
-	MaxDrawdown     *float64        `db:"max_drawdown"`
-	SharpeRatio     *float64        `db:"sharpe_ratio"`
-	CreatedAt       time.Time       `db:"created_at"`
-}
-
-type StrategyRun struct {
-	ID             int64           `db:"id"`
-	RunID          string          `db:"run_id"`
-	Symbol         string          `db:"symbol"`
-	StartTime      time.Time       `db:"start_time"`
-	EndTime        *time.Time      `db:"end_time"`
-	InitialCapital float64         `db:"initial_capital"`
-	FinalCapital   *float64        `db:"final_capital"`
-	StrategyType   string          `db:"strategy_type"`
-	StrategyParams json.RawMessage `db:"strategy_params"`
-	TotalTrades    int             `db:"total_trades"`
-	WinningTrades  int             `db:"winning_trades"`
-	LosingTrades   int             `db:"losing_trades"`
-	TotalProfit    float64         `db:"total_profit"`
-	MaxDrawdown    *float64        `db:"max_drawdown"`
-	SharpeRatio    *float64        `db:"sharpe_ratio"`
-	WinRate        *float64        `db:"win_rate"`
-	Environment    string          `db:"environment"`
-	Notes          *string         `db:"notes"`
-	CreatedAt      time.Time       `db:"created_at"`
-	UpdatedAt      time.Time       `db:"updated_at"`
-}
-
-func (r *MetricsRepository) SaveTradeMetric(metric TradeMetric) error {
+func (r *MetricsRepository) SaveTradeMetric(ctx context.Context, metric *metrics.TradeMetric) error {
 	query := `
 		INSERT INTO trade_metrics (
 			timestamp, symbol, side, price, quantity, profit, portfolio_value,
@@ -84,23 +45,22 @@ func (r *MetricsRepository) SaveTradeMetric(metric TradeMetric) error {
 	return err
 }
 
-func (r *MetricsRepository) CreateStrategyRun(run StrategyRun) (string, error) {
-	var runID string
+func (r *MetricsRepository) CreateStrategyRun(ctx context.Context, run *metrics.StrategyRun) error {
 	query := `
 		INSERT INTO strategy_runs (
-			symbol, start_time, initial_capital, strategy_type, strategy_params, environment
+			run_id, symbol, start_time, initial_capital, strategy_type, strategy_params, environment
 		) VALUES (
-			$1, $2, $3, $4, $5, $6
-		) RETURNING run_id
+			$1, $2, $3, $4, $5, $6, $7
+		)
 	`
-	err := r.db.QueryRow(query,
-		run.Symbol, run.StartTime, run.InitialCapital,
+	_, err := r.db.Exec(query,
+		run.RunID, run.Symbol, run.StartTime, run.InitialCapital,
 		run.StrategyType, run.StrategyParams, run.Environment,
-	).Scan(&runID)
-	return runID, err
+	)
+	return err
 }
 
-func (r *MetricsRepository) UpdateStrategyRun(runID string, run StrategyRun) error {
+func (r *MetricsRepository) UpdateStrategyRun(ctx context.Context, run *metrics.StrategyRun) error {
 	query := `
 		UPDATE strategy_runs SET
 			end_time = $2,
@@ -116,7 +76,7 @@ func (r *MetricsRepository) UpdateStrategyRun(runID string, run StrategyRun) err
 		WHERE run_id = $1
 	`
 	_, err := r.db.Exec(query,
-		runID, run.EndTime, run.FinalCapital, run.TotalTrades,
+		run.RunID, run.EndTime, run.FinalCapital, run.TotalTrades,
 		run.WinningTrades, run.LosingTrades, run.TotalProfit,
 		run.MaxDrawdown, run.SharpeRatio, run.WinRate,
 	)

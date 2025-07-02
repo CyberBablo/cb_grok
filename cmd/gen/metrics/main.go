@@ -2,11 +2,14 @@ package metrics
 
 import (
 	"cb_grok/config"
+	"cb_grok/internal/metrics"
 	"cb_grok/internal/metrics/repository"
 	"cb_grok/pkg/postgres"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"math"
 	"math/rand"
@@ -75,7 +78,9 @@ func populateMetrics(repo *repository.MetricsRepository, symbol string, days, tr
 	})
 
 	initialCapital := 10000.0
-	run := repository.StrategyRun{
+	runID := uuid.New().String()
+	run := &metrics.StrategyRun{
+		RunID:          runID,
 		Symbol:         symbol,
 		StartTime:      time.Now().AddDate(0, 0, -days),
 		InitialCapital: initialCapital,
@@ -84,7 +89,7 @@ func populateMetrics(repo *repository.MetricsRepository, symbol string, days, tr
 		Environment:    "demo",
 	}
 
-	runID, err := repo.CreateStrategyRun(run)
+	err := repo.CreateStrategyRun(context.Background(), run)
 	if err != nil {
 		return fmt.Errorf("failed to create strategy run: %w", err)
 	}
@@ -215,7 +220,7 @@ func populateMetrics(repo *repository.MetricsRepository, symbol string, days, tr
 		triggers := []string{"signal", "stop_loss", "take_profit"}
 		trigger := triggers[rand.Intn(len(triggers))]
 
-		trade := repository.TradeMetric{
+		trade := &metrics.TradeMetric{
 			Timestamp:       tradeTime,
 			Symbol:          symbol,
 			Side:            side,
@@ -230,7 +235,7 @@ func populateMetrics(repo *repository.MetricsRepository, symbol string, days, tr
 			SharpeRatio:     &currentSharpe,
 		}
 
-		err := repo.SaveTradeMetric(trade)
+		err := repo.SaveTradeMetric(context.Background(), trade)
 		if err != nil {
 			return fmt.Errorf("failed to save trade %d: %w", i+1, err)
 		}
@@ -251,7 +256,8 @@ func populateMetrics(repo *repository.MetricsRepository, symbol string, days, tr
 	sharpeRatio := 0.8 + rand.Float64()*0.7 // 0.8-1.5
 	endTimePtr := time.Now()
 
-	finalRun := repository.StrategyRun{
+	finalRun := &metrics.StrategyRun{
+		RunID:         runID,
 		EndTime:       &endTimePtr,
 		FinalCapital:  &finalCapital,
 		TotalTrades:   trades,
@@ -263,7 +269,7 @@ func populateMetrics(repo *repository.MetricsRepository, symbol string, days, tr
 		WinRate:       &finalWinRate,
 	}
 
-	err = repo.UpdateStrategyRun(runID, finalRun)
+	err = repo.UpdateStrategyRun(context.Background(), finalRun)
 	if err != nil {
 		return fmt.Errorf("failed to update strategy run: %w", err)
 	}
