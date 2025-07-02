@@ -3,6 +3,7 @@ package usecase
 import (
 	"cb_grok/internal/metrics"
 	"cb_grok/internal/metrics/repository"
+	metrics_model "cb_grok/internal/models/metrics"
 	"cb_grok/internal/trader"
 	"cb_grok/pkg/postgres"
 	"context"
@@ -14,12 +15,12 @@ import (
 // DBMetricsCollector implements metrics.Collector interface and collects metrics directly to PostgreSQL
 type DBMetricsCollector struct {
 	state       trader.State
-	metricsRepo *repository.MetricsRepository
+	metricsRepo metrics.Repository
 	symbol      string
 	logger      *zap.Logger
 }
 
-func NewDBMetricsCollector(state trader.State, db postgres.Postgres, symbol string, logger *zap.Logger) *DBMetricsCollector {
+func NewDBMetricsCollector(state trader.State, db postgres.Postgres, symbol string, logger *zap.Logger) trader.MetricsCollector {
 	return &DBMetricsCollector{
 		state:       state,
 		metricsRepo: repository.NewMetricsRepository(db),
@@ -69,7 +70,7 @@ func (m *DBMetricsCollector) SaveTradeMetric(order trader.Action, indicators map
 	profit := order.Profit
 
 	decisionTrigger := string(order.DecisionTrigger)
-	metric := &metrics.TradeMetric{
+	metric := &metrics_model.TradeMetric{
 		Timestamp:       time.UnixMilli(order.Timestamp),
 		Symbol:          m.symbol,
 		Side:            string(order.Decision),

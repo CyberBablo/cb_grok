@@ -4,6 +4,7 @@ import (
 	"cb_grok/config"
 	"cb_grok/internal/metrics"
 	"cb_grok/internal/metrics/repository"
+	metrics_model "cb_grok/internal/models/metrics"
 	"cb_grok/pkg/postgres"
 	"context"
 	"encoding/json"
@@ -65,7 +66,7 @@ func CMD() {
 	logger.Info("Metrics population completed successfully")
 }
 
-func populateMetrics(repo *repository.MetricsRepository, symbol string, days, trades int, logger *zap.Logger) error {
+func populateMetrics(repo metrics.Repository, symbol string, days, trades int, logger *zap.Logger) error {
 	rand.Seed(time.Now().UnixNano())
 
 	// Create strategy run
@@ -79,7 +80,7 @@ func populateMetrics(repo *repository.MetricsRepository, symbol string, days, tr
 
 	initialCapital := 10000.0
 	runID := uuid.New().String()
-	run := &metrics.StrategyRun{
+	run := &metrics_model.StrategyRun{
 		RunID:          runID,
 		Symbol:         symbol,
 		StartTime:      time.Now().AddDate(0, 0, -days),
@@ -220,7 +221,7 @@ func populateMetrics(repo *repository.MetricsRepository, symbol string, days, tr
 		triggers := []string{"signal", "stop_loss", "take_profit"}
 		trigger := triggers[rand.Intn(len(triggers))]
 
-		trade := &metrics.TradeMetric{
+		trade := &metrics_model.TradeMetric{
 			Timestamp:       tradeTime,
 			Symbol:          symbol,
 			Side:            side,
@@ -256,7 +257,7 @@ func populateMetrics(repo *repository.MetricsRepository, symbol string, days, tr
 	sharpeRatio := 0.8 + rand.Float64()*0.7 // 0.8-1.5
 	endTimePtr := time.Now()
 
-	finalRun := &metrics.StrategyRun{
+	finalRun := &metrics_model.StrategyRun{
 		RunID:         runID,
 		EndTime:       &endTimePtr,
 		FinalCapital:  &finalCapital,

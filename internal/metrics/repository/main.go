@@ -2,6 +2,7 @@ package repository
 
 import (
 	"cb_grok/internal/metrics"
+	metrics_model "cb_grok/internal/models/metrics"
 	"cb_grok/pkg/postgres"
 	"context"
 	"encoding/json"
@@ -13,11 +14,11 @@ type MetricsRepository struct {
 	db postgres.Postgres
 }
 
-func NewMetricsRepository(db postgres.Postgres) *MetricsRepository {
+func NewMetricsRepository(db postgres.Postgres) metrics.Repository {
 	return &MetricsRepository{db: db}
 }
 
-func (r *MetricsRepository) SaveTradeMetric(ctx context.Context, metric *metrics.TradeMetric) error {
+func (r *MetricsRepository) SaveTradeMetric(ctx context.Context, metric *metrics_model.TradeMetric) error {
 	query := `
 		INSERT INTO trade_metrics (
 			timestamp, symbol, side, price, quantity, profit, portfolio_value,
@@ -45,7 +46,7 @@ func (r *MetricsRepository) SaveTradeMetric(ctx context.Context, metric *metrics
 	return err
 }
 
-func (r *MetricsRepository) CreateStrategyRun(ctx context.Context, run *metrics.StrategyRun) error {
+func (r *MetricsRepository) CreateStrategyRun(ctx context.Context, run *metrics_model.StrategyRun) error {
 	query := `
 		INSERT INTO strategy_runs (
 			run_id, symbol, start_time, initial_capital, strategy_type, strategy_params, environment
@@ -60,7 +61,7 @@ func (r *MetricsRepository) CreateStrategyRun(ctx context.Context, run *metrics.
 	return err
 }
 
-func (r *MetricsRepository) UpdateStrategyRun(ctx context.Context, run *metrics.StrategyRun) error {
+func (r *MetricsRepository) UpdateStrategyRun(ctx context.Context, run *metrics_model.StrategyRun) error {
 	query := `
 		UPDATE strategy_runs SET
 			end_time = $2,
