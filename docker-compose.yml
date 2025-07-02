@@ -46,7 +46,7 @@ services:
     container_name: cb_grok_demo_trader
     build:
       context: .
-      dockerfile: demotrade.Dockerfile
+      dockerfile: ./contrib/docker/demotrade.Dockerfile
     environment:
       - CONFIG_PATH=./config/config.yaml
     volumes:
