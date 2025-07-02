@@ -2,13 +2,13 @@ package trader
 
 import (
 	"cb_grok/internal/exchange"
-	"cb_grok/internal/model"
+	strategy_model "cb_grok/internal/models/strategy"
 	"cb_grok/internal/strategy"
 	"cb_grok/pkg/models"
 )
 
 type TraderParams struct {
-	Model          *model.Model
+	Model          *strategy_model.StrategyFileModel
 	Exchange       exchange.Exchange
 	Strategy       strategy.Strategy
 	Settings       *TraderSettings

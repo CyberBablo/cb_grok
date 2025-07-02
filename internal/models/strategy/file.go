@@ -1,7 +1,6 @@
-package model
+package strategy
 
 import (
-	"cb_grok/internal/strategy"
 	"encoding/json"
 	"fmt"
 	"go.uber.org/zap"
@@ -14,12 +13,12 @@ const (
 	dir = "lib/best_models"
 )
 
-type Model struct {
+type StrategyFileModel struct {
 	Symbol string `json:"symbol"`
-	strategy.StrategyParams
+	StrategyParamsModel
 }
 
-func Save(m Model) string {
+func Save(m StrategyFileModel) string {
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		zap.L().Error("create dir", zap.Error(err))
 		return ""
@@ -45,14 +44,14 @@ func Save(m Model) string {
 	return path
 }
 
-func Load(filename string) (*Model, error) {
+func Load(filename string) (*StrategyFileModel, error) {
 	path := filepath.Join(dir, filename)
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var m Model
+	var m StrategyFileModel
 
 	return &m, json.Unmarshal(data, &m)
 }

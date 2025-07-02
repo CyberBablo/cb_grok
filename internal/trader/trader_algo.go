@@ -20,7 +20,7 @@ func (t *trader) processAlgo(candle models.OHLCV) (*Action, error) {
 	candleLog, _ := json.Marshal(candle)
 	t.log.Info("trader: new candle has been processed", zap.Int("total_length", len(t.state.ohlcv)), zap.String("candle", string(candleLog)))
 
-	appliedOHLCV := t.strategy.ApplyIndicators(t.state.ohlcv, t.model.StrategyParams)
+	appliedOHLCV := t.strategy.ApplyIndicators(t.state.ohlcv, t.model.StrategyParamsModel)
 	if appliedOHLCV == nil {
 		t.log.Info("trader: not enough candles in the dataset")
 		return nil, nil
@@ -40,7 +40,7 @@ func (t *trader) BacktestAlgo(appliedOHLCV []models.AppliedOHLCV) (*Action, erro
 }
 
 func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
-	appliedOHLCV = t.strategy.ApplySignals(appliedOHLCV, t.model.StrategyParams)
+	appliedOHLCV = t.strategy.ApplySignals(appliedOHLCV, t.model.StrategyParamsModel)
 	if appliedOHLCV == nil {
 		return nil, nil
 	}

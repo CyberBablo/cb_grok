@@ -1,8 +1,7 @@
 package optimize
 
 import (
-	"cb_grok/internal/model"
-	"cb_grok/internal/strategy"
+	strategy_model "cb_grok/internal/models/strategy"
 	"cb_grok/pkg/models"
 	"github.com/c-bata/goptuna"
 	"go.uber.org/zap"
@@ -127,7 +126,7 @@ func (o *optimize) objective(params objectiveParams) func(trial goptuna.Trial) (
 			return 0, err
 		}
 
-		strategyParams := strategy.StrategyParams{
+		strategyParams := strategy_model.StrategyParamsModel{
 			MAShortPeriod:       maShortPeriod,
 			MALongPeriod:        maLongPeriod,
 			RSIPeriod:           rsiPeriod,
@@ -154,9 +153,9 @@ func (o *optimize) objective(params objectiveParams) func(trial goptuna.Trial) (
 			StochasticWeight:    stochasticWeight,
 		}
 
-		trainBTResult, err := o.bt.Run(params.candles, &model.Model{
-			Symbol:         params.symbol,
-			StrategyParams: strategyParams,
+		trainBTResult, err := o.bt.Run(params.candles, &strategy_model.StrategyFileModel{
+			Symbol:              params.symbol,
+			StrategyParamsModel: strategyParams,
 		})
 		if err != nil {
 			return 0, err

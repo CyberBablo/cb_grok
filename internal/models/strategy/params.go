@@ -1,6 +1,6 @@
 package strategy
 
-type StrategyParams struct {
+type StrategyParamsModel struct {
 	MAShortPeriod       int     `json:"ma_short_period"`
 	MALongPeriod        int     `json:"ma_long_period"`
 	RSIPeriod           int     `json:"rsi_period"`
@@ -27,7 +27,7 @@ type StrategyParams struct {
 	StochasticWeight    float64 `json:"stochastic_weight"`   // Вес для сигнала
 }
 
-type Signals struct {
+type SignalsModel struct {
 	EMASignal        int
 	RSISignal        int
 	MACDSignal       int

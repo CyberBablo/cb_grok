@@ -6,8 +6,7 @@ import (
 	"cb_grok/internal/backtest"
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/exchange/bybit"
-	"cb_grok/internal/model"
-	"cb_grok/internal/strategy"
+	strategy_model "cb_grok/internal/models/strategy"
 	"cb_grok/internal/utils"
 	"cb_grok/pkg/telegram"
 	"context"
@@ -124,16 +123,16 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 		return err
 	}
 
-	var bestStrategyParams strategy.StrategyParams
+	var bestStrategyParams strategy_model.StrategyParamsModel
 	err = json.Unmarshal(b, &bestStrategyParams)
 	if err != nil {
 		o.log.Error("optimize: best params marshal", zap.Error(err))
 		return err
 	}
 
-	valBTResult, err := o.bt.Run(valCandles, &model.Model{
-		Symbol:         params.Symbol,
-		StrategyParams: bestStrategyParams,
+	valBTResult, err := o.bt.Run(valCandles, &strategy_model.StrategyFileModel{
+		Symbol:              params.Symbol,
+		StrategyParamsModel: bestStrategyParams,
 	})
 	if err != nil {
 		o.log.Error("optimize: final validation backtest", zap.Error(err))
@@ -145,9 +144,9 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 		o.log.Info(fmt.Sprintf("Order: %v", order))
 	}
 
-	filename := model.Save(model.Model{
-		Symbol:         params.Symbol,
-		StrategyParams: bestStrategyParams,
+	filename := strategy_model.Save(strategy_model.StrategyFileModel{
+		Symbol:              params.Symbol,
+		StrategyParamsModel: bestStrategyParams,
 	})
 
 	orderCount := len(valBTResult.Orders)

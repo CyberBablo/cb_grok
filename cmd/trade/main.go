@@ -7,7 +7,7 @@ import (
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/exchange/bybit"
 	metrics_usecase "cb_grok/internal/metrics/usecase"
-	"cb_grok/internal/model"
+	strategy_model "cb_grok/internal/models/strategy"
 	"cb_grok/internal/order"
 	orderRepository "cb_grok/internal/order/repository"
 	orderUsecase "cb_grok/internal/order/usecase"
@@ -128,7 +128,7 @@ func runTrade(log *zap.Logger, tg *telegram.TelegramService, cfg *config.Config,
 	flag.StringVar(&tradingMode, "trading_mode", "simulation", "Trading mode (simulation, demo, live). Default: simulation")
 	flag.Parse()
 
-	mod, err := model.Load(cfg.DemoTrading.Model)
+	mod, err := strategy_model.Load(cfg.DemoTrading.Model)
 	if err != nil {
 		log.Error("Failed to load model params", zap.Error(err))
 		return fmt.Errorf("error to load model: %w", err)

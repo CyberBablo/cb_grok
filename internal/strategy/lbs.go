@@ -3,6 +3,7 @@ package strategy
 import (
 	"cb_grok/pkg/indicators"
 	"cb_grok/pkg/models"
+	strategy_model "cb_grok/internal/models/strategy"
 	"go.uber.org/zap"
 	"math"
 )
@@ -13,7 +14,7 @@ func NewLinearBiasStrategy() Strategy {
 	return &LinearBiasStrategy{}
 }
 
-func (s *LinearBiasStrategy) ApplyIndicators(candles []models.OHLCV, params StrategyParams) []models.AppliedOHLCV {
+func (s *LinearBiasStrategy) ApplyIndicators(candles []models.OHLCV, params strategy_model.StrategyParamsModel) []models.AppliedOHLCV {
 	requiredCandles := max(params.MALongPeriod, params.EMALongPeriod, params.MACDLongPeriod, params.BollingerPeriod, params.StochasticKPeriod)
 	if len(candles) < requiredCandles {
 		zap.S().Infof("strategy: required candles: %d", requiredCandles)
@@ -64,14 +65,14 @@ func (s *LinearBiasStrategy) ApplyIndicators(candles []models.OHLCV, params Stra
 	return appliedCandles
 }
 
-func (s *LinearBiasStrategy) ApplySignals(candles []models.AppliedOHLCV, params StrategyParams) []models.AppliedOHLCV {
+func (s *LinearBiasStrategy) ApplySignals(candles []models.AppliedOHLCV, params strategy_model.StrategyParamsModel) []models.AppliedOHLCV {
 	if len(candles) < 2 {
 		return candles
 	}
 
 	// Сделаем вычисление сигналов более чувствительным для генерации большего количества торговых сигналов
 	for i := 1; i < len(candles); i++ {
-		signals := Signals{EMASignal: 0, RSISignal: 0, MACDSignal: 0, TrendSignal: 0, BBSignal: 0, StochasticSignal: 0}
+		signals := strategy_model.SignalsModel{EMASignal: 0, RSISignal: 0, MACDSignal: 0, TrendSignal: 0, BBSignal: 0, StochasticSignal: 0}
 
 		// Увеличиваем чувствительность пересечения MA
 		if candles[i-1].ShortMA <= candles[i-1].LongMA && candles[i].ShortMA > candles[i].LongMA {

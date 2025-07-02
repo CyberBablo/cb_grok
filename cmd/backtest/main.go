@@ -5,7 +5,7 @@ import (
 	"cb_grok/internal/backtest"
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/exchange/bybit"
-	"cb_grok/internal/model"
+	strategy_model "cb_grok/internal/models/strategy"
 	"cb_grok/internal/trader"
 	"cb_grok/internal/utils"
 	"cb_grok/pkg/logger"
@@ -89,7 +89,7 @@ func runBacktest(cfg *config.Config, backtest backtest.Backtest, tg *telegram.Te
 		return err
 	}
 
-	mod, err := model.Load(modelFilename)
+	mod, err := strategy_model.Load(modelFilename)
 	if err != nil {
 		log.Error("Failed to load model params", zap.Error(err))
 		return fmt.Errorf("error to load model: %w", err)

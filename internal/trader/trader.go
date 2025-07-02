@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"cb_grok/internal/candle"
 	"cb_grok/internal/exchange"
-	"cb_grok/internal/model"
+	strategy_model "cb_grok/internal/models/strategy"
 	"cb_grok/internal/order"
 	"cb_grok/internal/strategy"
 	"cb_grok/pkg/models"
@@ -66,7 +66,7 @@ type State interface {
 }
 
 type trader struct {
-	model    *model.Model
+	model    *strategy_model.StrategyFileModel
 	strategy strategy.Strategy
 	exch     exchange.Exchange
 	state    *state

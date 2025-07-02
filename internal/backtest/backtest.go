@@ -3,7 +3,7 @@ package backtest
 import (
 	"cb_grok/internal/candle"
 	"cb_grok/internal/exchange"
-	"cb_grok/internal/model"
+	model "cb_grok/internal/models/strategy"
 	"cb_grok/internal/order"
 	"cb_grok/internal/strategy"
 	"cb_grok/internal/trader"
@@ -15,7 +15,7 @@ import (
 )
 
 type Backtest interface {
-	Run(candles []models.OHLCV, mod *model.Model) (*BacktestResult, error)
+	Run(candles []models.OHLCV, mod *model.StrategyFileModel) (*BacktestResult, error)
 }
 
 type backtest struct {
@@ -49,7 +49,7 @@ func NewBacktest(log *zap.Logger, tg *telegram.TelegramService, orderUC order.Us
 	}
 }
 
-func (b *backtest) Run(ohlcv []models.OHLCV, mod *model.Model) (*BacktestResult, error) {
+func (b *backtest) Run(ohlcv []models.OHLCV, mod *model.StrategyFileModel) (*BacktestResult, error) {
 	str := strategy.NewLinearBiasStrategy()
 
 	trade := trader.NewTrader(b.log, b.tg, b.orderUC, b.candleRepo)
@@ -67,7 +67,7 @@ func (b *backtest) Run(ohlcv []models.OHLCV, mod *model.Model) (*BacktestResult,
 		InitialCapital: b.InitialCapital,
 	})
 
-	appliedCandles := str.ApplyIndicators(ohlcv, mod.StrategyParams)
+	appliedCandles := str.ApplyIndicators(ohlcv, mod.StrategyParamsModel)
 	if appliedCandles == nil {
 		return nil, fmt.Errorf("no candles after strategy apply")
 	}
