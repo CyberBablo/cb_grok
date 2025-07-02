@@ -10,6 +10,7 @@ require (
 	github.com/ethereum/go-ethereum v1.15.7
 	github.com/georgysavva/scany v1.2.3
 	github.com/go-echarts/go-echarts/v2 v2.5.3
+	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/jackc/pgconn v1.14.3
 	github.com/jackc/pgx v3.6.2+incompatible
@@ -21,12 +22,12 @@ require (
 	go.uber.org/fx v1.23.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/sync v0.13.0
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	github.com/bitly/go-simplejson v0.5.1 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/holiman/uint256 v1.3.2 // indirect
 	github.com/iancoleman/strcase v0.3.0 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
@@ -52,5 +53,4 @@ require (
 	golang.org/x/text v0.22.0 // indirect
 	gonum.org/v1/gonum v0.14.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
-	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )

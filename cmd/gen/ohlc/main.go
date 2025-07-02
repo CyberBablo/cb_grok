@@ -1,4 +1,4 @@
-package main
+package ohlc
 
 import (
 	"cb_grok/internal/exchange/bybit"
@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func main() {
+func CMD() {
 	log, _ := logger.NewZapLogger(logger.ZapConfig{
 		Level:       "info",
 		Development: true,

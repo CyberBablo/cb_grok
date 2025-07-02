@@ -1,4 +1,4 @@
-package main
+package candle
 
 import (
 	"cb_grok/config"
@@ -19,7 +19,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func main() {
+func CMD() {
 	configPath := os.Getenv("CONFIG_PATH")
 
 	cfg, err := config.LoadConfig(configPath)

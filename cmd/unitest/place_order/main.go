@@ -1,4 +1,4 @@
-package main
+package place_order
 
 import (
 	"cb_grok/config"
@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-func main() {
+func CMD() {
 	//ws := bybit.NewBybitPublicWebSocket("wss://stream.bybit.com/v5/public/spot", func(message string) error {
 	//	fmt.Println("Received:", message)
 	//

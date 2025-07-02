@@ -1,4 +1,4 @@
-package main
+package metrics
 
 import (
 	"cb_grok/config"
@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func main() {
+func CMD() {
 	var (
 		symbol = flag.String("symbol", "BTCUSDT", "Trading symbol")
 		days   = flag.Int("days", 30, "Number of days to generate data for")
