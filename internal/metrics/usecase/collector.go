@@ -1,7 +1,7 @@
-package metrics
+package usecase
 
 import (
-	"cb_grok/internal/database/repository"
+	"cb_grok/internal/metrics/repository"
 	"cb_grok/internal/trader"
 	"cb_grok/pkg/postgres"
 	"encoding/json"

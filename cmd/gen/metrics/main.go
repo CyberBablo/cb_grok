@@ -2,7 +2,7 @@ package metrics
 
 import (
 	"cb_grok/config"
-	"cb_grok/internal/database/repository"
+	"cb_grok/internal/metrics/repository"
 	"cb_grok/pkg/postgres"
 	"encoding/json"
 	"flag"

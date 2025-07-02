@@ -6,7 +6,7 @@ import (
 	candleRepository "cb_grok/internal/candle/repository"
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/exchange/bybit"
-	"cb_grok/internal/metrics"
+	metrics_usecase "cb_grok/internal/metrics/usecase"
 	"cb_grok/internal/model"
 	"cb_grok/internal/order"
 	orderRepository "cb_grok/internal/order/repository"
@@ -160,7 +160,7 @@ func runTrade(log *zap.Logger, tg *telegram.TelegramService, cfg *config.Config,
 		InitialCapital: 10000,
 	})
 	symbol := "BTCUSDT"
-	metricsCollector := metrics.NewDBMetricsCollector(trade.GetState(), metricsDB, symbol, log)
+	metricsCollector := metrics_usecase.NewDBMetricsCollector(trade.GetState(), metricsDB, symbol, log)
 	trade.SetMetricsCollector(metricsCollector)
 
 	/*
