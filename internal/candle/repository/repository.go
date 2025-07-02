@@ -1,39 +1,22 @@
 package repository
 
 import (
-	"context"
-	"fmt"
-	"time"
-
 	"cb_grok/internal/candle"
 	"cb_grok/pkg/models"
 	"cb_grok/pkg/postgres"
+	"context"
+	"fmt"
 )
 
-type Candle struct {
-	ID        int       `db:"id"`
-	Symbol    string    `db:"symbol"`
-	Exchange  string    `db:"exchange"`
-	Timeframe string    `db:"timeframe"`
-	Timestamp int64     `db:"timestamp"`
-	Open      float64   `db:"open"`
-	High      float64   `db:"high"`
-	Low       float64   `db:"low"`
-	Close     float64   `db:"close"`
-	Volume    float64   `db:"volume"`
-	CreatedAt time.Time `db:"created_at"`
-	UpdatedAt time.Time `db:"updated_at"`
-}
-
-type repository struct {
+type repo struct {
 	db postgres.Postgres
 }
 
 func New(db postgres.Postgres) candle.Repository {
-	return &repository{db: db}
+	return &repo{db: db}
 }
 
-func (r *repository) Create(ctx context.Context, symbol, exchange, timeframe string, candle models.OHLCV) error {
+func (r *repo) Create(ctx context.Context, symbol, exchange, timeframe string, candle models.OHLCV) error {
 	query := `
 		INSERT INTO candles (symbol, exchange, timeframe, timestamp, open, high, low, close, volume)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -57,7 +40,7 @@ func (r *repository) Create(ctx context.Context, symbol, exchange, timeframe str
 	return nil
 }
 
-func (r *repository) Select(ctx context.Context, symbol, exchange, timeframe string, startTime, endTime int64) ([]models.OHLCV, error) {
+func (r *repo) Select(ctx context.Context, symbol, exchange, timeframe string, startTime, endTime int64) ([]models.OHLCV, error) {
 	query := `
 		SELECT
 			timestamp,

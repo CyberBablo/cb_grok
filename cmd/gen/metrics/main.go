@@ -51,7 +51,7 @@ func CMD() {
 		logger.Fatal("Failed to connect to database", zap.Error(err))
 	}
 
-	repo := repository.NewMetricsRepository(db)
+	repo := repository.New(db)
 
 	logger.Info("Starting metrics population",
 		zap.String("symbol", *symbol),

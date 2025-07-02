@@ -9,16 +9,16 @@ import (
 	"time"
 )
 
-// MetricsRepository implements metrics.Repository interface
-type MetricsRepository struct {
+// repo implements metrics.Repository interface
+type repo struct {
 	db postgres.Postgres
 }
 
-func NewMetricsRepository(db postgres.Postgres) metrics.Repository {
-	return &MetricsRepository{db: db}
+func New(db postgres.Postgres) metrics.Repository {
+	return &repo{db: db}
 }
 
-func (r *MetricsRepository) SaveTradeMetric(ctx context.Context, metric *metrics_model.TradeMetric) error {
+func (r *repo) SaveTradeMetric(ctx context.Context, metric *metrics_model.TradeMetric) error {
 	query := `
 		INSERT INTO trade_metrics (
 			timestamp, symbol, side, price, quantity, profit, portfolio_value,
@@ -46,7 +46,7 @@ func (r *MetricsRepository) SaveTradeMetric(ctx context.Context, metric *metrics
 	return err
 }
 
-func (r *MetricsRepository) CreateStrategyRun(ctx context.Context, run *metrics_model.StrategyRun) error {
+func (r *repo) CreateStrategyRun(ctx context.Context, run *metrics_model.StrategyRun) error {
 	query := `
 		INSERT INTO strategy_runs (
 			run_id, symbol, start_time, initial_capital, strategy_type, strategy_params, environment
@@ -61,7 +61,7 @@ func (r *MetricsRepository) CreateStrategyRun(ctx context.Context, run *metrics_
 	return err
 }
 
-func (r *MetricsRepository) UpdateStrategyRun(ctx context.Context, run *metrics_model.StrategyRun) error {
+func (r *repo) UpdateStrategyRun(ctx context.Context, run *metrics_model.StrategyRun) error {
 	query := `
 		UPDATE strategy_runs SET
 			end_time = $2,
@@ -84,7 +84,7 @@ func (r *MetricsRepository) UpdateStrategyRun(ctx context.Context, run *metrics_
 	return err
 }
 
-func (r *MetricsRepository) SaveTimeSeriesMetric(timestamp time.Time, symbol, metricName string, value float64, labels map[string]interface{}) error {
+func (r *repo) SaveTimeSeriesMetric(timestamp time.Time, symbol, metricName string, value float64, labels map[string]interface{}) error {
 	labelsJSON, err := json.Marshal(labels)
 	if err != nil {
 		return err

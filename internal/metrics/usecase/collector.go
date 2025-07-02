@@ -23,7 +23,7 @@ type DBMetricsCollector struct {
 func NewDBMetricsCollector(state trader.State, db postgres.Postgres, symbol string, logger *zap.Logger) trader.MetricsCollector {
 	return &DBMetricsCollector{
 		state:       state,
-		metricsRepo: repository.NewMetricsRepository(db),
+		metricsRepo: repository.New(db),
 		symbol:      symbol,
 		logger:      logger,
 	}
