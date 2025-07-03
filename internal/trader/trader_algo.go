@@ -3,7 +3,6 @@ package trader
 import (
 	order_model "cb_grok/internal/order/model"
 	"cb_grok/pkg/models"
-	"context"
 	"encoding/json"
 	"fmt"
 	"go.uber.org/zap"
@@ -60,17 +59,6 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 	)
 
 	transactionAmount := 0.0
-
-	orders, err := t.orderUC.GetActiveOrders(context.Background())
-	if err != nil {
-		t.log.Error("failed to fetch active orders", zap.Error(err))
-		return nil, err
-	}
-
-	if len(orders) > 1 {
-		t.log.Error("unexpected situation: there are more than 1 opened orders")
-		return nil, fmt.Errorf("unexpected situation: there are more than 1 opened orders")
-	}
 
 	lastOrder, err := t.orderUC.GetLastOrder(t.model.ID)
 	if err != nil {
