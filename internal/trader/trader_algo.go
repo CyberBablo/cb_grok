@@ -17,7 +17,7 @@ func (t *trader) processAlgo(candle models.OHLCV) (*Action, error) {
 	}
 
 	candleLog, _ := json.Marshal(candle)
-	t.log.Info("trader: new candle has been processed", zap.Int("total_length", len(t.state.ohlcv)), zap.String("candle", string(candleLog)))
+	t.log.Info(fmt.Sprintf("trader_%d: new candle has been processed", t.model.ID), zap.Int("total_length", len(t.state.ohlcv)), zap.String("candle", string(candleLog)))
 
 	appliedOHLCV := t.strategy.ApplyIndicators(t.state.ohlcv, t.strategyEntity.Params)
 	if appliedOHLCV == nil {
