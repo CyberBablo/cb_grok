@@ -6,9 +6,8 @@ import (
 	"cb_grok/internal/backtest"
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/exchange/bybit"
-	"cb_grok/internal/model"
-	model3 "cb_grok/internal/optimize/model"
-	model2 "cb_grok/internal/strategy/model"
+	optimizeModel "cb_grok/internal/optimize/model"
+	strategyModel "cb_grok/internal/strategy/model"
 	"cb_grok/internal/telegram"
 	"cb_grok/internal/utils"
 	"context"
@@ -24,7 +23,7 @@ import (
 )
 
 type Optimize interface {
-	Run(params model3.RunOptimizeParams) error
+	Run(params optimizeModel.RunOptimizeParams) error
 }
 type optimize struct {
 	log *zap.Logger
@@ -42,7 +41,7 @@ func NewOptimize(log *zap.Logger, bt backtest.Backtest, tg *telegram.TelegramSer
 	}
 }
 
-func (o *optimize) Run(params model3.RunOptimizeParams) error {
+func (o *optimize) Run(params optimizeModel.RunOptimizeParams) error {
 	ex, err := bybit.NewBybit("", "", "live")
 	if err != nil {
 		o.log.Error("optimize: initialize Binance exchange", zap.Error(err))
@@ -125,17 +124,14 @@ func (o *optimize) Run(params model3.RunOptimizeParams) error {
 		return err
 	}
 
-	var bestStrategyParams model2.StrategyParams
+	var bestStrategyParams strategyModel.StrategyParams
 	err = json.Unmarshal(b, &bestStrategyParams)
 	if err != nil {
 		o.log.Error("optimize: best params marshal", zap.Error(err))
 		return err
 	}
 
-	valBTResult, err := o.bt.Run(valCandles, &model.Model{
-		Symbol:         params.Symbol,
-		StrategyParams: bestStrategyParams,
-	})
+	valBTResult, err := o.bt.Run(valCandles, bestStrategyParams)
 	if err != nil {
 		o.log.Error("optimize: final validation backtest", zap.Error(err))
 		return err
@@ -146,23 +142,17 @@ func (o *optimize) Run(params model3.RunOptimizeParams) error {
 		o.log.Info(fmt.Sprintf("Order: %v", order))
 	}
 
-	filename := model.Save(model.Model{
-		Symbol:         params.Symbol,
-		StrategyParams: bestStrategyParams,
-	})
-
 	orderCount := len(valBTResult.Orders)
 
 	o.log.Info("optimization completed",
 		zap.Float64("combined_sharpe_ratio", combinedSharpRatio),
 		zap.Float64("validation_sharpe_ratio", valBTResult.SharpeRatio),
 		zap.Float64("validation_max_drawdown", valBTResult.MaxDrawdown),
-		zap.Float64("validation_win_rate", valBTResult.WinRate),
-		zap.String("filename", filename))
+		zap.Float64("validation_win_rate", valBTResult.WinRate))
 
 	result := fmt.Sprintf(
-		"Символ: %s\nTrials: %d\nTimeframe: %s\nКоличество дней на валидации: %d\nКоличество сделок: %d\nCombined Sharpe Ratio: %.2f\nValidation Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
-		params.Symbol, params.Trials, params.Timeframe, params.ValSetDays, orderCount, combinedSharpRatio, valBTResult.SharpeRatio, valBTResult.FinalCapital, valBTResult.MaxDrawdown, valBTResult.WinRate, filename)
+		"Символ: %s\nTrials: %d\nTimeframe: %s\nКоличество дней на валидации: %d\nКоличество сделок: %d\nCombined Sharpe Ratio: %.2f\nValidation Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\n",
+		params.Symbol, params.Trials, params.Timeframe, params.ValSetDays, orderCount, combinedSharpRatio, valBTResult.SharpeRatio, valBTResult.FinalCapital, valBTResult.MaxDrawdown, valBTResult.WinRate)
 
 	buff := &bytes.Buffer{}
 	w := struct2csv.NewWriter(buff)

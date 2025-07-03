@@ -3,12 +3,11 @@ package backtest
 import (
 	"cb_grok/internal/candle"
 	"cb_grok/internal/exchange"
-	"cb_grok/internal/model"
 	"cb_grok/internal/order"
 	"cb_grok/internal/strategy"
+	strategyModel "cb_grok/internal/strategy/model"
 	"cb_grok/internal/telegram"
 	"cb_grok/internal/trader"
-	model2 "cb_grok/internal/trader/model"
 	"cb_grok/pkg/models"
 	"fmt"
 	"go.uber.org/fx"
@@ -16,7 +15,7 @@ import (
 )
 
 type Backtest interface {
-	Run(candles []models.OHLCV, mod *model.Model) (*BacktestResult, error)
+	Run(candles []models.OHLCV, params strategyModel.StrategyParams) (*BacktestResult, error)
 }
 
 type backtest struct {
@@ -50,15 +49,15 @@ func NewBacktest(log *zap.Logger, tg *telegram.TelegramService, orderUC order.Or
 	}
 }
 
-func (b *backtest) Run(ohlcv []models.OHLCV, mod *model.Model) (*BacktestResult, error) {
+func (b *backtest) Run(ohlcv []models.OHLCV, params strategyModel.StrategyParams) (*BacktestResult, error) {
 	str := strategy.NewLinearBiasStrategy()
 
 	trade := trader.NewTrader(b.log, b.tg, b.orderUC, b.candleRepo)
-	trade.Setup(model2.TraderParams{
-		Model:    mod,
-		Exchange: exchange.NewMockExchange(),
-		Strategy: str,
-		Settings: &model2.TraderSettings{
+	trade.Setup(trader.Params{
+		StrategyParams: params,
+		Exchange:       exchange.NewMockExchange(),
+		Strategy:       str,
+		Settings: &trader.Settings{
 			Commission:           b.Commission,
 			SlippagePercent:      b.SlippagePercent,
 			Spread:               b.Spread,
@@ -68,7 +67,7 @@ func (b *backtest) Run(ohlcv []models.OHLCV, mod *model.Model) (*BacktestResult,
 		InitialCapital: b.InitialCapital,
 	})
 
-	appliedCandles := str.ApplyIndicators(ohlcv, mod.StrategyParams)
+	appliedCandles := str.ApplyIndicators(ohlcv, params)
 	if appliedCandles == nil {
 		return nil, fmt.Errorf("no candles after strategy apply")
 	}

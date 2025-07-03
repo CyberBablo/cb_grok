@@ -78,8 +78,8 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 		return nil, err
 	}
 
-	allowSell := lastOrder != nil && lastOrder.SideID == int64(order_model.OrderSideBuy) && lastOrder.StatusID == int64(order_model.OrderStatusFilled)
-	allowBuy := lastOrder == nil || (lastOrder.SideID == int64(order_model.OrderSideSell) && lastOrder.StatusID == int64(order_model.OrderStatusFilled))
+	allowSell := lastOrder != nil && lastOrder.SideID == int64(order_model.OrderSideBuy) && lastOrder.StatusID == int64(order_model.OrderStatusFilled) && lastOrder.QuoteQty != nil
+	allowBuy := lastOrder == nil || (lastOrder.SideID == int64(order_model.OrderSideSell) && lastOrder.StatusID == int64(order_model.OrderStatusFilled) && lastOrder.QuoteQty != nil)
 
 	if allowBuy && allowSell {
 		t.log.Error("trade_algo: unexpected situation: allowed both buy and sell")

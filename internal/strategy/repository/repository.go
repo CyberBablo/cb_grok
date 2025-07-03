@@ -22,8 +22,8 @@ func New(db postgres.Postgres) strategy.Repository {
 func (r *repo) InsertStrategy(entity *strategyModel.Strategy) error {
 	query := `
 		INSERT INTO public.strategy (
-			symbol_id, created_at, params
-		) VALUES ($1, $2, $3)
+			symbol_id, params
+		) VALUES ($1, $2)
 		RETURNING id
 	`
 	var id int64
@@ -33,7 +33,6 @@ func (r *repo) InsertStrategy(entity *strategyModel.Strategy) error {
 	}
 	err = r.db.Get(&id, query,
 		entity.SymbolID,
-		entity.CreatedAt,
 		paramsString,
 	)
 	if err != nil {
