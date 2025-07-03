@@ -15,7 +15,6 @@ func (b *bybit) GetOrderStatus(orderId string) (order_model.OrderStatus, error) 
 		b.logger.Error("failed to get order info", zap.String("orderId", orderId), zap.Error(err))
 		return 0, err
 	}
-	fmt.Println(response)
 	result, err := ParseResponse(response)
 	if err != nil {
 		return 0, err

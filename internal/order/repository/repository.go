@@ -92,7 +92,7 @@ func (r *repo) GetActiveOrders() ([]order_model.Order, error) {
 			o.base_qty, o.quote_qty, o.ext_id, o.created_at, o.updated_at, o.tp_price, o.sl_price, o.trader_id
 		FROM public.order o
 		JOIN public.order_status os ON o.status_id = os.id
-		WHERE os.code IN ('new', 'placed', 'filled')
+		WHERE os.code IN ('new', 'placed') or quote_qty is NULL
 	`
 	err := r.db.Select(&orders, query)
 	if err != nil {
