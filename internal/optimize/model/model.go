@@ -1,4 +1,4 @@
-package optimize
+package model
 
 type RunOptimizeParams struct {
 	Symbol       string

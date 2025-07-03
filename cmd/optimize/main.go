@@ -6,6 +6,7 @@ import (
 	"cb_grok/internal/candle"
 	candleRepository "cb_grok/internal/candle/repository"
 	"cb_grok/internal/optimize"
+	"cb_grok/internal/optimize/model"
 	"cb_grok/internal/order"
 	orderRepository "cb_grok/internal/order/repository"
 	orderUsecase "cb_grok/internal/order/usecase"
@@ -68,7 +69,7 @@ func main() {
 			return orderRepository.New(db)
 		}),
 
-		fx.Provide(func(repo order.Repository, log *zap.Logger) order.Usecase {
+		fx.Provide(func(repo order.Repository, log *zap.Logger) order.Order {
 			return orderUsecase.New(repo, log)
 		}),
 
@@ -117,7 +118,7 @@ func runOptimize(cfg *config.Config, opt optimize.Optimize) error {
 
 	flag.Parse()
 
-	return opt.Run(optimize.RunOptimizeParams{
+	return opt.Run(model.RunOptimizeParams{
 		Symbol:       symbol,
 		Timeframe:    timeframe,
 		TrainSetDays: trainSetDays,

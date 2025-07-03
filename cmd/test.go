@@ -9,6 +9,10 @@ import (
 	"os"
 )
 
+// service_name
+// info, warning, error
+// json {"order_id": "131313123"}
+
 func main() {
 	configPath := os.Getenv("CONFIG_PATH")
 
@@ -21,26 +25,26 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	amount, err := bybitApp.GetAvailableSpotWalletBalance("BTC")
+	amount, err := bybitApp.GetAvailableSpotWalletBalance("USDT")
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println("Amount of demo balance: ", amount)
 
-	buyOrderId := "1981146562319092992"
-	status, err := bybitApp.GetOrderStatus(buyOrderId)
-	if err != nil {
-		panic(err)
-	}
-
-	quoteQty, err := bybitApp.GetOrderQuoteQty(buyOrderId)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println("order inf", bybitApp)
-	fmt.Println("status", status)
-	fmt.Println("quote", quoteQty)
+	//buyOrderId := "1981146562319092992"
+	//status, err := bybitApp.GetOrderStatus(buyOrderId)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//
+	//quoteQty, err := bybitApp.GetOrderQuoteQty(buyOrderId)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//
+	//fmt.Println("order inf", bybitApp)
+	//fmt.Println("status", status)
+	//fmt.Println("quote", quoteQty)
 
 	//response, err := bybitApp.PlaceSpotMarketOrder("BTCUSDT", "buy", 100, nil, nil)
 	//

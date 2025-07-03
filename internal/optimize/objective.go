@@ -2,7 +2,7 @@ package optimize
 
 import (
 	"cb_grok/internal/model"
-	"cb_grok/internal/strategy"
+	model2 "cb_grok/internal/strategy/model"
 	"cb_grok/pkg/models"
 	"github.com/c-bata/goptuna"
 	"go.uber.org/zap"
@@ -127,7 +127,7 @@ func (o *optimize) objective(params objectiveParams) func(trial goptuna.Trial) (
 			return 0, err
 		}
 
-		strategyParams := strategy.StrategyParams{
+		strategyParams := model2.StrategyParams{
 			MAShortPeriod:       maShortPeriod,
 			MALongPeriod:        maLongPeriod,
 			RSIPeriod:           rsiPeriod,

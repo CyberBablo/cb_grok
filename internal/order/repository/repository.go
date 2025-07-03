@@ -22,8 +22,8 @@ func (r *repo) InsertOrder(order *order_model.Order) error {
 	query := `
 		INSERT INTO public.order (
 			symbol_id, exch_id, type_id, side_id, status_id, 
-			base_qty, quote_qty, ext_id, created_at, updated_at, tp_price, sl_price
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+			base_qty, quote_qty, ext_id, created_at, updated_at, tp_price, sl_price, trader_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		RETURNING id
 	`
 	var id int64
@@ -40,6 +40,7 @@ func (r *repo) InsertOrder(order *order_model.Order) error {
 		order.UpdatedAt,
 		order.TakeProfitPrice,
 		order.StopLossPrice,
+		order.TraderID,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to insert order: %w", err)
@@ -88,7 +89,7 @@ func (r *repo) GetActiveOrders() ([]order_model.Order, error) {
 	var orders []order_model.Order
 	query := `
 		SELECT o.id, o.symbol_id, o.exch_id, o.type_id, o.side_id, o.status_id,
-			o.base_qty, o.quote_qty, o.ext_id, o.created_at, o.updated_at, o.tp_price, o.sl_price
+			o.base_qty, o.quote_qty, o.ext_id, o.created_at, o.updated_at, o.tp_price, o.sl_price, o.trader_id
 		FROM public.order o
 		JOIN public.order_status os ON o.status_id = os.id
 		WHERE os.code IN ('new', 'placed')
@@ -100,14 +101,14 @@ func (r *repo) GetActiveOrders() ([]order_model.Order, error) {
 	return orders, nil
 }
 
-func (r *repo) GetLastOrder() (*order_model.Order, error) {
+func (r *repo) GetLastOrder(traderID int64) (*order_model.Order, error) {
 	var orders []order_model.Order
 	query := `
 		SELECT o.id, o.symbol_id, o.exch_id, o.type_id, o.side_id, o.status_id,
 			o.base_qty, o.quote_qty, o.ext_id, o.created_at, o.updated_at, o.tp_price, o.sl_price
-		FROM public.order o	ORDER BY o.id desc LIMIT 1
+		FROM public.order o where trader_id=$1 ORDER BY o.id desc LIMIT 1
 	`
-	err := r.db.Select(&orders, query)
+	err := r.db.Select(&orders, query, traderID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get active orders: %w", err)
 	}

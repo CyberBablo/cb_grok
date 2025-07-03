@@ -8,6 +8,7 @@ import (
 	"cb_grok/internal/strategy"
 	"cb_grok/internal/telegram"
 	"cb_grok/internal/trader"
+	model2 "cb_grok/internal/trader/model"
 	"cb_grok/pkg/models"
 	"fmt"
 	"go.uber.org/fx"
@@ -29,11 +30,11 @@ type backtest struct {
 	tg  *telegram.TelegramService
 	log *zap.Logger
 
-	orderUC    order.Usecase
+	orderUC    order.Order
 	candleRepo candle.Repository
 }
 
-func NewBacktest(log *zap.Logger, tg *telegram.TelegramService, orderUC order.Usecase, candleRepo candle.Repository) Backtest {
+func NewBacktest(log *zap.Logger, tg *telegram.TelegramService, orderUC order.Order, candleRepo candle.Repository) Backtest {
 	return &backtest{
 		InitialCapital:       10000.0,
 		Commission:           0.001,  // 0.1%
@@ -53,11 +54,11 @@ func (b *backtest) Run(ohlcv []models.OHLCV, mod *model.Model) (*BacktestResult,
 	str := strategy.NewLinearBiasStrategy()
 
 	trade := trader.NewTrader(b.log, b.tg, b.orderUC, b.candleRepo)
-	trade.Setup(trader.TraderParams{
+	trade.Setup(model2.TraderParams{
 		Model:    mod,
 		Exchange: exchange.NewMockExchange(),
 		Strategy: str,
-		Settings: &trader.TraderSettings{
+		Settings: &model2.TraderSettings{
 			Commission:           b.Commission,
 			SlippagePercent:      b.SlippagePercent,
 			Spread:               b.Spread,

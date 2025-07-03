@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func (u *usecase) CreateSpotMarketOrder(symbol string, side exchange.OrderSide, baseQty float64, takeProfit *float64, stopLoss *float64) error {
+func (u *orderUC) CreateSpotMarketOrder(symbol string, side exchange.OrderSide, baseQty float64, takeProfit *float64, stopLoss *float64, traderID int64) error {
 	if u.ex == nil {
 		return errors.New("exchange not set")
 	}
@@ -20,9 +20,9 @@ func (u *usecase) CreateSpotMarketOrder(symbol string, side exchange.OrderSide, 
 		return err
 	}
 
-	sideId := 1
+	sideId := int64(1)
 	if side == exchange.OrderSideSell {
-		sideId = 2
+		sideId = int64(2)
 	}
 
 	symbolValue, err := u.repo.GetSymbolByCode(symbol)
@@ -37,7 +37,7 @@ func (u *usecase) CreateSpotMarketOrder(symbol string, side exchange.OrderSide, 
 		SymbolID:        symbolValue.ID,
 		TypeID:          order_model.OrderTypeMarket,
 		SideID:          sideId,
-		StatusID:        int(order_model.OrderStatusNew),
+		StatusID:        int64(order_model.OrderStatusNew),
 		BaseQty:         lo.ToPtr(baseQty),
 		QuoteQty:        nil,
 		ExtID:           "",
@@ -45,6 +45,7 @@ func (u *usecase) CreateSpotMarketOrder(symbol string, side exchange.OrderSide, 
 		UpdatedAt:       nil,
 		TakeProfitPrice: takeProfit,
 		StopLossPrice:   stopLoss,
+		TraderID:        traderID,
 	}
 	err = u.repo.InsertOrder(ord)
 	if err != nil {

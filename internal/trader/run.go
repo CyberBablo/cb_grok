@@ -19,7 +19,7 @@ import (
 )
 
 func (t *trader) Run(mode TradeMode, timeframe string) error {
-	if t.model == nil || t.state == nil || t.settings == nil {
+	if t.strategyParams == nil || t.state == nil || t.settings == nil {
 		return fmt.Errorf("required fields are empty. Setup the trader first")
 	}
 	if mode != ModeLiveDemo {
@@ -31,12 +31,14 @@ func (t *trader) Run(mode TradeMode, timeframe string) error {
 
 	totalCandles := 60 * candlesPerDay
 
-	candles, err := t.exch.FetchSpotOHLCV(t.model.Symbol, exchange.Timeframe1h, totalCandles)
+	candles, err := t.exch.FetchSpotOHLCV(t.symbol, exchange.Timeframe1h, totalCandles)
 	if err != nil {
 		return err
 	}
 
 	t.state.ohlcv = candles
+
+	t.log.Info("CONNECTING TO WS")
 
 	ws := bybitapi.NewBybitPublicWebSocket("wss://stream.bybit.com/v5/public/spot", func(message string) error {
 		var msg bybit.WSKlineMessage
@@ -89,7 +91,7 @@ func (t *trader) Run(mode TradeMode, timeframe string) error {
 
 		// Save candle to database if repository is available
 		if t.candleRepo != nil {
-			symbol := strings.ReplaceAll(t.model.Symbol, "/", "")
+			symbol := strings.ReplaceAll(t.symbol, "/", "")
 			ctx := context.Background()
 			if err := t.candleRepo.Create(ctx, symbol, "bybit", timeframe, candle); err != nil {
 				t.log.Error("failed to save candle", zap.Error(err),
@@ -120,7 +122,7 @@ func (t *trader) Run(mode TradeMode, timeframe string) error {
 		return nil
 	})
 
-	symbol := strings.ReplaceAll(t.model.Symbol, "/", "")
+	symbol := strings.ReplaceAll(t.symbol, "/", "")
 
 	_, _ = ws.Connect().SendSubscription([]string{fmt.Sprintf("kline.%s.%s", timeframe, symbol)})
 
@@ -128,7 +130,7 @@ func (t *trader) Run(mode TradeMode, timeframe string) error {
 }
 
 func (t *trader) RunSimulation(mode TradeMode) error {
-	if t.model == nil || t.state == nil || t.settings == nil {
+	if t.strategyParams == nil || t.state == nil || t.settings == nil {
 		return fmt.Errorf("required fields are empty. Setup the trader first")
 	}
 	if mode != ModeSimulation {
@@ -147,7 +149,7 @@ func (t *trader) RunSimulation(mode TradeMode) error {
 
 	t.log.Info("connected to websocket", zap.String("url", wsUrl))
 
-	b, _ := json.MarshalIndent(t.model, "", "    ")
+	b, _ := json.MarshalIndent(t.strategyParams, "", "    ")
 	fmt.Printf("Use model:\n%+v\n", string(b))
 
 	// --------------------------------------------------------------
@@ -175,7 +177,7 @@ func (t *trader) RunSimulation(mode TradeMode) error {
 
 		// Save candle to database if repository is available (simulation mode)
 		if t.candleRepo != nil {
-			symbol := strings.ReplaceAll(t.model.Symbol, "/", "")
+			symbol := strings.ReplaceAll(t.symbol, "/", "")
 			ctx := context.Background()
 			// For simulation, we use "simulation" as exchange name
 			if err := t.candleRepo.Create(ctx, symbol, "simulation", "1m", candle); err != nil {
@@ -211,7 +213,7 @@ func (t *trader) RunSimulation(mode TradeMode) error {
 
 	result := fmt.Sprintf(
 		"Результат симуляции\n\nСимвол: %s\nКол-во свечей: %d\nКоличество сделок: %d\nSharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f",
-		t.model.Symbol, len(t.state.GetOHLCV()), len(t.state.GetOrders()), t.state.CalculateSharpeRatio(), t.state.GetPortfolioValue(), t.state.CalculateMaxDrawdown(), t.state.CalculateWinRate())
+		t.symbol, len(t.state.GetOHLCV()), len(t.state.GetOrders()), t.state.CalculateSharpeRatio(), t.state.GetPortfolioValue(), t.state.CalculateMaxDrawdown(), t.state.CalculateWinRate())
 
 	buff := &bytes.Buffer{}
 	w := struct2csv.NewWriter(buff)

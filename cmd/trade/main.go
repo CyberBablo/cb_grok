@@ -4,16 +4,18 @@ import (
 	"cb_grok/config"
 	"cb_grok/internal/candle"
 	candleRepository "cb_grok/internal/candle/repository"
-	"cb_grok/internal/exchange"
-	"cb_grok/internal/exchange/bybit"
-	"cb_grok/internal/metrics"
-	"cb_grok/internal/model"
+	"cb_grok/internal/launcher"
 	"cb_grok/internal/order"
 	orderRepository "cb_grok/internal/order/repository"
 	orderUsecase "cb_grok/internal/order/usecase"
+	stage_model "cb_grok/internal/stage/model"
 	"cb_grok/internal/strategy"
+	strategyRepository "cb_grok/internal/strategy/repository"
+	"cb_grok/internal/symbol"
+	symbolRepository "cb_grok/internal/symbol/repository"
 	"cb_grok/internal/telegram"
-	"cb_grok/internal/trader"
+	trader "cb_grok/internal/trader"
+	traderRepository "cb_grok/internal/trader/repository"
 	"cb_grok/internal/utils/logger"
 	"cb_grok/pkg/postgres"
 	"context"
@@ -34,13 +36,11 @@ const (
 
 func main() {
 	configPath := os.Getenv("CONFIG_PATH")
-
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		fmt.Printf("Failed to load config: %v\n", err)
 		os.Exit(1)
 	}
-
 	app := fx.New(
 		// Configuration
 		fx.Provide(func() *config.Config { return cfg }),
@@ -88,7 +88,13 @@ func main() {
 			return orderRepository.New(db)
 		}),
 
-		fx.Provide(func(repo order.Repository, log *zap.Logger) order.Usecase {
+		fx.Provide(func(db postgres.Postgres) strategy.Repository { return strategyRepository.New(db) }),
+
+		fx.Provide(func(db postgres.Postgres) trader.Repository { return traderRepository.New(db) }),
+
+		fx.Provide(func(db postgres.Postgres) symbol.Repository { return symbolRepository.New(db) }),
+
+		fx.Provide(func(repo order.Repository, log *zap.Logger) order.Order {
 			return orderUsecase.New(repo, log)
 		}),
 
@@ -101,10 +107,25 @@ func main() {
 		trader.Module,
 
 		// Lifecycle hooks
+
+		/*
+			lifecycle fx.Lifecycle,
+			log *zap.Logger,
+			cfg *config.Config,
+			orderUC order.Order,
+			candleRepo candle.Repository,
+			strategyRepo strategy.Repository,
+			traderRepo trader.Repository,
+			tg *telegram.TelegramService,
+			db postgres.Postgres,
+			metricsDB postgres.Postgres,
+			shutdowner fx.Shutdowner,
+		*/
+
 		fx.Invoke(
 			fx.Annotate(
 				registerLifecycleHooks,
-				fx.ParamTags(``, ``, ``, ``, ``, ``, ``, `name:"metrics"`, ``),
+				fx.ParamTags(``, ``, ``, ``, ``, ``, ``, ``, ``, ``, `name:"metrics"`, ``),
 			),
 		),
 
@@ -117,67 +138,33 @@ func main() {
 	app.Run()
 }
 
-func runTrade(log *zap.Logger, tg *telegram.TelegramService, cfg *config.Config, orderUC order.Usecase, candleRepo candle.Repository, metricsDB postgres.Postgres) error {
+func runTrade(
+	log *zap.Logger,
+	tg *telegram.TelegramService,
+	cfg *config.Config,
+	orderUC order.Order,
+	candleRepo candle.Repository,
+	metricsDB postgres.Postgres,
+	strategyRepo strategy.Repository,
+	traderRepo trader.Repository,
+	symbolRepo symbol.Repository,
+) error {
 	var (
 		tradingMode string
 	)
 	flag.StringVar(&tradingMode, "trading_mode", "simulation", "Trading mode (simulation, demo, live). Default: simulation")
 	flag.Parse()
 
-	mod, err := model.Load(cfg.DemoTrading.Model)
-	if err != nil {
-		log.Error("Failed to load model params", zap.Error(err))
-		return fmt.Errorf("error to load model: %w", err)
-	}
-
-	var exch exchange.Exchange
-
+	var runStage stage_model.StageStatus
 	switch tradingMode {
+	case "simulation":
+		runStage = stage_model.StageSimulation
 	case "demo":
-		exch, err = bybit.NewBybit(cfg.Bybit.APIKey, cfg.Bybit.APISecret, exchange.TradingModeDemo)
-	//case "live":
-	//exch, err = bybit.NewBybit(cfg.Bybit.APIKey, cfg.Bybit.APISecret, exchange.TradingModeLive)
+		runStage = stage_model.StageDemo
 	default:
-		exch = exchange.NewMockExchange()
+		runStage = stage_model.StageProd
 	}
-
-	if err != nil {
-		log.Error("Failed to initialize exchange", zap.Error(err), zap.String("trading_mode", tradingMode))
-		return fmt.Errorf("failed to initialize exchange: %w", err)
-	}
-
-	trade := trader.NewTrader(log, tg, orderUC, candleRepo)
-
-	trade.Setup(trader.TraderParams{
-		Model:          mod,
-		Exchange:       exch,
-		Strategy:       strategy.NewLinearBiasStrategy(),
-		Settings:       nil, // default
-		InitialCapital: 10000,
-	})
-	symbol := "BTCUSDT"
-	metricsCollector := metrics.NewDBMetricsCollector(trade.GetState(), metricsDB, symbol, log)
-	trade.SetMetricsCollector(metricsCollector)
-
-	/*
-		Available timeframes:
-
-		1 3 5 15 30 (min)
-		60 120 240 360 720 (min)
-		D (day)
-		W (week)
-		M (month)
-	*/
-	if tradingMode == "demo" {
-		err = trade.Run(trader.ModeLiveDemo, "60")
-	} else {
-		err = trade.RunSimulation(trader.ModeSimulation)
-	}
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return launcher.Launch(runStage, log, tg, cfg, orderUC, candleRepo, metricsDB, strategyRepo, traderRepo, symbolRepo)
 }
 
 // registerLifecycleHooks registers lifecycle hooks for the application
@@ -185,8 +172,11 @@ func registerLifecycleHooks(
 	lifecycle fx.Lifecycle,
 	log *zap.Logger,
 	cfg *config.Config,
-	orderUC order.Usecase,
+	orderUC order.Order,
 	candleRepo candle.Repository,
+	strategyRepo strategy.Repository,
+	traderRepo trader.Repository,
+	symbolRepo symbol.Repository,
 	tg *telegram.TelegramService,
 	db postgres.Postgres,
 	metricsDB postgres.Postgres,
@@ -201,9 +191,9 @@ func registerLifecycleHooks(
 
 			exitCode := 0
 			go func() {
-				err := runTrade(log, tg, cfg, orderUC, candleRepo, metricsDB)
+				err := runTrade(log, tg, cfg, orderUC, candleRepo, metricsDB, strategyRepo, traderRepo, symbolRepo)
 				if err != nil {
-					log.Error("Failed to run optimize", zap.Error(err))
+					log.Error("Failed to run trade", zap.Error(err))
 					exitCode = 1
 				}
 

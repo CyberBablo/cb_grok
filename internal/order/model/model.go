@@ -7,11 +7,11 @@ import (
 // Order represents the order table
 type Order struct {
 	ID              int64      `db:"id"`
-	SymbolID        int        `db:"symbol_id"`
-	ExchangeID      int        `db:"exch_id"`
-	TypeID          int        `db:"type_id"`
-	SideID          int        `db:"side_id"`
-	StatusID        int        `db:"status_id"`
+	SymbolID        int64      `db:"symbol_id"`
+	ExchangeID      int64      `db:"exch_id"`
+	TypeID          int64      `db:"type_id"`
+	SideID          int64      `db:"side_id"`
+	StatusID        int64      `db:"status_id"`
 	BaseQty         *float64   `db:"base_qty"`
 	QuoteQty        *float64   `db:"quote_qty"`
 	ExtID           string     `db:"ext_id"`
@@ -19,22 +19,23 @@ type Order struct {
 	UpdatedAt       *time.Time `db:"updated_at"`
 	TakeProfitPrice *float64   `db:"tp_price"`
 	StopLossPrice   *float64   `db:"sl_price"`
+	TraderID        int64      `db:"trader_id"`
 }
 
 // Exchange represents the exchange table
 type Exchange struct {
-	ID   int    `db:"id"`
+	ID   int64  `db:"id"`
 	Name string `db:"name"`
 }
 
 type Symbol struct {
-	ID    int    `db:"id"`
+	ID    int64  `db:"id"`
 	Code  string `db:"code"`
 	Base  string `db:"base"`
 	Quote string `db:"quote"`
 }
 
-type OrderStatus int
+type OrderStatus int64
 
 const (
 	OrderStatusNew      OrderStatus = 1
@@ -44,14 +45,14 @@ const (
 )
 
 const (
-	OrderProductSpot int = 1
+	OrderProductSpot int64 = 1
 )
 
 const (
-	OrderTypeMarket int = 1
+	OrderTypeMarket int64 = 1
 )
 
-type OrderSide int
+type OrderSide int64
 
 const (
 	OrderSideBuy  OrderSide = 1

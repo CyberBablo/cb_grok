@@ -20,7 +20,7 @@ func (t *trader) processAlgo(candle models.OHLCV) (*Action, error) {
 	candleLog, _ := json.Marshal(candle)
 	t.log.Info("trader: new candle has been processed", zap.Int("total_length", len(t.state.ohlcv)), zap.String("candle", string(candleLog)))
 
-	appliedOHLCV := t.strategy.ApplyIndicators(t.state.ohlcv, t.model.StrategyParams)
+	appliedOHLCV := t.strategy.ApplyIndicators(t.state.ohlcv, *t.strategyParams)
 	if appliedOHLCV == nil {
 		t.log.Info("trader: not enough candles in the dataset")
 		return nil, nil
@@ -40,7 +40,7 @@ func (t *trader) BacktestAlgo(appliedOHLCV []models.AppliedOHLCV) (*Action, erro
 }
 
 func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
-	appliedOHLCV = t.strategy.ApplySignals(appliedOHLCV, t.model.StrategyParams)
+	appliedOHLCV = t.strategy.ApplySignals(appliedOHLCV, *t.strategyParams)
 	if appliedOHLCV == nil {
 		return nil, nil
 	}
@@ -52,7 +52,7 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 	currentSignal := currentCandle.Signal
 	currentPrice := currentCandle.Close
 
-	t.log.Info("trader: processed signal", zap.Int("sig", currentSignal))
+	t.log.Info(fmt.Sprintf("trader_%d: processed signal", t.model.ID), zap.Int("sig", currentSignal))
 
 	var (
 		decision        = DecisionHold
@@ -60,12 +60,6 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 	)
 
 	transactionAmount := 0.0
-
-	symbol, err := t.orderUC.GetSymbolByCode(t.model.Symbol)
-	if err != nil {
-		t.log.Error("failed to get symbol by code", zap.Error(err))
-		return nil, err
-	}
 
 	orders, err := t.orderUC.GetActiveOrders(context.Background())
 	if err != nil {
@@ -78,14 +72,14 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 		return nil, fmt.Errorf("unexpected situation: there are more than 1 opened orders")
 	}
 
-	lastOrder, err := t.orderUC.GetLastOrder()
+	lastOrder, err := t.orderUC.GetLastOrder(t.model.ID)
 	if err != nil {
 		t.log.Error("failed to fetch last order", zap.Error(err))
 		return nil, err
 	}
 
-	allowSell := lastOrder != nil && lastOrder.SideID == int(order_model.OrderSideBuy) && lastOrder.StatusID == int(order_model.OrderStatusFilled)
-	allowBuy := lastOrder == nil || (lastOrder.SideID == int(order_model.OrderSideSell) && lastOrder.StatusID == int(order_model.OrderStatusFilled))
+	allowSell := lastOrder != nil && lastOrder.SideID == int64(order_model.OrderSideBuy) && lastOrder.StatusID == int64(order_model.OrderStatusFilled)
+	allowBuy := lastOrder == nil || (lastOrder.SideID == int64(order_model.OrderSideSell) && lastOrder.StatusID == int64(order_model.OrderStatusFilled))
 
 	if allowBuy && allowSell {
 		t.log.Error("trade_algo: unexpected situation: allowed both buy and sell")
@@ -98,7 +92,7 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 
 			transactionAmount = *lastOrder.QuoteQty
 
-			err = t.orderUC.CreateSpotMarketOrder(t.model.Symbol, "sell", transactionAmount, nil, nil)
+			err = t.orderUC.CreateSpotMarketOrder(t.symbol, "sell", transactionAmount, nil, nil, t.model.ID)
 			if err != nil {
 				t.log.Error("create order failed", zap.Error(err))
 			}
@@ -108,7 +102,7 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 
 			transactionAmount = *lastOrder.QuoteQty
 
-			err = t.orderUC.CreateSpotMarketOrder(t.model.Symbol, "sell", transactionAmount, nil, nil)
+			err = t.orderUC.CreateSpotMarketOrder(t.symbol, "sell", transactionAmount, nil, nil, t.model.ID)
 			if err != nil {
 				t.log.Error("create order failed", zap.Error(err))
 			}
@@ -119,7 +113,7 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 
 			transactionAmount = *lastOrder.QuoteQty
 
-			err = t.orderUC.CreateSpotMarketOrder(t.model.Symbol, "sell", transactionAmount, nil, nil)
+			err = t.orderUC.CreateSpotMarketOrder(t.symbol, "sell", transactionAmount, nil, nil, t.model.ID)
 			if err != nil {
 				t.log.Error("create order failed", zap.Error(err))
 			}
@@ -127,20 +121,18 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 
 	} else if allowBuy {
 		if currentSignal == 1 { // buy signal
-			bal, err := t.exch.GetAvailableSpotWalletBalance(symbol.Quote)
-			if err != nil {
-				t.log.Error("failed to get available wallet balance", zap.Error(err))
-				return nil, err
-			}
 
 			decision = DecisionBuy
-
-			transactionAmount = min(bal, 100)
+			if lastOrder == nil {
+				transactionAmount = t.model.InitQty
+			} else {
+				transactionAmount = *lastOrder.QuoteQty
+			}
 
 			stopLoss := currentPrice - currentCandle.ATR*t.settings.StopLossMultiplier
 			takeProfit := currentPrice + currentCandle.ATR*t.settings.TakeProfitMultiplier
 
-			err = t.orderUC.CreateSpotMarketOrder(t.model.Symbol, "buy", transactionAmount, &takeProfit, &stopLoss)
+			err = t.orderUC.CreateSpotMarketOrder(t.symbol, "buy", transactionAmount, &takeProfit, &stopLoss, t.model.ID)
 			if err != nil {
 				t.log.Error("create order failed", zap.Error(err))
 			}
@@ -159,7 +151,7 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 		DecisionTrigger: decisionTrigger,
 		Price:           currentPrice,
 		AssetAmount:     transactionAmount,
-		AssetCurrency:   strings.Split(t.model.Symbol, "/")[0],
+		AssetCurrency:   strings.Split(t.symbol, "/")[0],
 		Comment:         "",
 		PortfolioValue:  portfolioValue,
 	}

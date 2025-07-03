@@ -6,6 +6,7 @@ import (
 	"github.com/jackc/pgx/v4"
 	"log"
 	"math/rand"
+	"os"
 	"time"
 
 	"github.com/georgysavva/scany/pgxscan"
@@ -87,23 +88,25 @@ func InitPsqlDB(c *Conn) (Postgres, error) {
 		c.SSLMode)
 	connectionUrl += fmt.Sprintf(" pool_max_conns=%d pool_min_conns=%d pool_max_conn_lifetime=%v pool_max_conn_idle_time=%v",
 		_maxConnections, _minConnections, _maxConnectionLifeTime, _maxIdleLifeTime)
-
 	connectionAttempts := _defaultConnectionAttempts
 	var result *pgxpool.Pool
 	var err error
+
+	fmt.Println("connectionURL", connectionUrl)
 	for connectionAttempts > 0 {
+		fmt.Println("control", connectionUrl)
 		result, err = pgxpool.Connect(context.Background(), connectionUrl)
 		if err == nil {
 			break
 		}
 
 		log.Printf("ATTEMPT %d TO CONNECT TO POSTGRES BY URL %s FAILED: %s\n", connectionAttempts, connectionUrl, err.Error())
+		os.Exit(0)
 
 		connectionAttempts--
 
 		time.Sleep(_defaultConnectionTimeout)
 	}
-
 	if result == nil {
 		log.Printf("POSTGRES CONNECTION(%s) ERROR: %s\n", connectionUrl, err.Error())
 		return nil, err

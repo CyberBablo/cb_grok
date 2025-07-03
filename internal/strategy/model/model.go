@@ -1,4 +1,6 @@
-package strategy
+package model
+
+import "time"
 
 type StrategyParams struct {
 	MAShortPeriod       int     `json:"ma_short_period"`
@@ -34,4 +36,11 @@ type Signals struct {
 	TrendSignal      int
 	BBSignal         int
 	StochasticSignal int // Сигнал от Stochastic
+}
+
+type Strategy struct {
+	ID        int            `db:"id"`
+	CreatedAt time.Time      `db:"created_at"`
+	SymbolID  int            `db:"symbol_id"`
+	Params    StrategyParams `db:"params"`
 }

@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func (u *usecase) SyncOrders(ctx context.Context) {
+func (u *orderUC) SyncOrders(ctx context.Context) {
 	if u.ex == nil {
 		return
 	}
@@ -34,7 +34,7 @@ func (u *usecase) SyncOrders(ctx context.Context) {
 					u.log.Error("failed to get order info", zap.String("order_id", order.ExtID), zap.Error(err))
 					continue
 				}
-				if int(exchangeStatus) != order.StatusID {
+				if int64(exchangeStatus) != order.StatusID {
 					u.log.Info(fmt.Sprintf("STARTED ORDER SYNCING %s", order.ExtID))
 					err := u.repo.UpdateOrderStatus(order.ID, int(exchangeStatus))
 					if err != nil {

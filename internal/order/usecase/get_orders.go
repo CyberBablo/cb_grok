@@ -5,7 +5,7 @@ import (
 	"context"
 )
 
-func (u *usecase) GetActiveOrders(ctx context.Context) ([]order_model.Order, error) {
+func (u *orderUC) GetActiveOrders(ctx context.Context) ([]order_model.Order, error) {
 	orders, err := u.repo.GetActiveOrders()
 	if err != nil {
 		return nil, err
@@ -13,6 +13,6 @@ func (u *usecase) GetActiveOrders(ctx context.Context) ([]order_model.Order, err
 	return orders, nil
 }
 
-func (u *usecase) GetLastOrder() (*order_model.Order, error) {
-	return u.repo.GetLastOrder()
+func (u *orderUC) GetLastOrder(traderID int64) (*order_model.Order, error) {
+	return u.repo.GetLastOrder(traderID)
 }

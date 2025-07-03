@@ -7,20 +7,20 @@ import (
 	"go.uber.org/zap"
 )
 
-type usecase struct {
+type orderUC struct {
 	repo order.Repository
 	ex   exchange.Exchange
 	log  *zap.Logger
 }
 
-func New(repo order.Repository, log *zap.Logger) order.Usecase {
-	return &usecase{
+func New(repo order.Repository, log *zap.Logger) order.Order {
+	return &orderUC{
 		repo: repo,
 		log:  log,
 	}
 }
 
-func (u *usecase) Init(ex exchange.Exchange) {
+func (u *orderUC) Init(ex exchange.Exchange) {
 	u.ex = ex
 
 	go u.SyncOrders(context.Background())

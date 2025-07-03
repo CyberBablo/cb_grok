@@ -39,7 +39,7 @@ func main() {
 	log.Info(fmt.Sprintf("Candles[0]: %+v", candles[0]))
 	log.Info(fmt.Sprintf("Candles[%d]: %+v", len(candles)-1, candles[len(candles)-1]))
 
-	//var appliedCandles []models.AppliedOHLCV
+	//var appliedCandles []model.AppliedOHLCV
 	//
 	//// 1) full apply
 	//strat := strategy.NewLinearBiasStrategy()

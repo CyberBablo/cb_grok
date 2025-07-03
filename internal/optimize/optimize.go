@@ -7,7 +7,8 @@ import (
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/exchange/bybit"
 	"cb_grok/internal/model"
-	"cb_grok/internal/strategy"
+	model3 "cb_grok/internal/optimize/model"
+	model2 "cb_grok/internal/strategy/model"
 	"cb_grok/internal/telegram"
 	"cb_grok/internal/utils"
 	"context"
@@ -23,7 +24,7 @@ import (
 )
 
 type Optimize interface {
-	Run(params RunOptimizeParams) error
+	Run(params model3.RunOptimizeParams) error
 }
 type optimize struct {
 	log *zap.Logger
@@ -41,7 +42,7 @@ func NewOptimize(log *zap.Logger, bt backtest.Backtest, tg *telegram.TelegramSer
 	}
 }
 
-func (o *optimize) Run(params RunOptimizeParams) error {
+func (o *optimize) Run(params model3.RunOptimizeParams) error {
 	ex, err := bybit.NewBybit("", "", "live")
 	if err != nil {
 		o.log.Error("optimize: initialize Binance exchange", zap.Error(err))
@@ -124,7 +125,7 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 		return err
 	}
 
-	var bestStrategyParams strategy.StrategyParams
+	var bestStrategyParams model2.StrategyParams
 	err = json.Unmarshal(b, &bestStrategyParams)
 	if err != nil {
 		o.log.Error("optimize: best params marshal", zap.Error(err))

@@ -6,13 +6,13 @@ import (
 	"context"
 )
 
-// Usecase interface definition
-type Usecase interface {
+// Order interface definition
+type Order interface {
 	Init(ex exchange.Exchange)
 
-	CreateSpotMarketOrder(symbol string, side exchange.OrderSide, baseQty float64, takeProfit *float64, stopLoss *float64) error
+	CreateSpotMarketOrder(symbol string, side exchange.OrderSide, baseQty float64, takeProfit *float64, stopLoss *float64, traderID int64) error
 	SyncOrders(ctx context.Context)
 	GetActiveOrders(ctx context.Context) ([]order_model.Order, error)
 	GetSymbolByCode(code string) (*order_model.Symbol, error)
-	GetLastOrder() (*order_model.Order, error)
+	GetLastOrder(traderID int64) (*order_model.Order, error)
 }
