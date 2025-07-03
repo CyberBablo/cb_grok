@@ -43,7 +43,7 @@ var (
 
 type Trader interface {
 	Setup(params Params)
-	Run(mode TradeMode, timeframe string) error
+	Run(mode TradeMode) error
 	RunSimulation(mode TradeMode) error
 	BacktestAlgo(appliedOHLCV []models.AppliedOHLCV) (*Action, error)
 	GetState() State
@@ -64,8 +64,8 @@ type State interface {
 }
 
 type trader struct {
-	strategyParams *strategyModel.StrategyParams
 	model          *traderModel.Trader
+	strategyEntity *strategyModel.Strategy
 	strategy       strategy.Strategy
 	exch           exchange.Exchange
 	state          *state
@@ -103,8 +103,7 @@ func NewTrader(
 }
 
 func (t *trader) Setup(params Params) {
-	t.strategyParams = &params.StrategyParams
-
+	t.strategyEntity = params.StrategyModel
 	t.strategy = params.Strategy
 	t.model = params.Model
 	t.exch = params.Exchange

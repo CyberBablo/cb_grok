@@ -11,11 +11,11 @@ import (
 
 type Params struct {
 	Symbol         string
-	StrategyParams strategyModel.StrategyParams
 	Exchange       exchange.Exchange
 	Strategy       strategy.Strategy
 	Settings       *Settings
 	InitialCapital float64
+	StrategyModel  *strategyModel.Strategy
 	Model          *traderModel.Trader
 }
 

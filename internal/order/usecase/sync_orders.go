@@ -56,6 +56,11 @@ func (u *orderUC) SyncOrders(ctx context.Context) {
 					}
 
 				}
+				if order.QuoteQty == nil {
+					u.log.Warn(fmt.Sprintf("order_id %s order_quotQty %v order_status %d", order.ExtID, order.QuoteQty, exchangeStatus))
+				} else {
+					u.log.Warn(fmt.Sprintf("order_id %s order_quotQty %f order_status %d", order.ExtID, *order.QuoteQty, exchangeStatus))
+				}
 				if int64(exchangeStatus) == int64(order_model.OrderStatusFilled) && order.QuoteQty == nil {
 					u.log.Info(fmt.Sprintf("ORDER MISSED FILLED %s", order.ExtID))
 					quoteQty, err := u.ex.GetOrderQuoteQty(order.ExtID)

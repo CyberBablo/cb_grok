@@ -43,4 +43,5 @@ type Strategy struct {
 	CreatedAt time.Time      `db:"created_at"`
 	SymbolID  int            `db:"symbol_id"`
 	Params    StrategyParams `db:"params"`
+	TimeFrame string         `db:"timeframe"`
 }

@@ -60,7 +60,7 @@ func Launch(
 		}
 		newTrader.Setup(trader.Params{
 			Symbol:         activeSymbol.Code,
-			StrategyParams: activeStrategy.Params,
+			StrategyModel:  activeStrategy,
 			Exchange:       activeExchange,
 			Strategy:       strategy.NewLinearBiasStrategy(),
 			Settings:       nil,
@@ -72,7 +72,7 @@ func Launch(
 		fmt.Println("TRADER RUN", activeTrader.ID)
 		if traderStage == stage_model.StageDemo {
 			go func() {
-				err := newTrader.Run(trader.ModeLiveDemo, "60")
+				err := newTrader.Run(trader.ModeLiveDemo)
 				if err != nil {
 					log.Error("failed to run trader", zap.Error(err))
 				}

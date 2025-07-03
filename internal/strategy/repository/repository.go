@@ -44,7 +44,7 @@ func (r *repo) InsertStrategy(entity *strategyModel.Strategy) error {
 func (r *repo) GetStrategy(id int64) (*strategyModel.Strategy, error) {
 	var result []strategyModel.Strategy
 	query := `
-		SELECT id, symbol_id, created_at, params 
+		SELECT id, symbol_id, created_at, params, timeframe
 		FROM public.strategy 
 		WHERE id = $1
 	`

@@ -1,7 +1,7 @@
 package trader
 
 import (
-	order_model "cb_grok/internal/order/model"
+	orderModel "cb_grok/internal/order/model"
 	"cb_grok/pkg/models"
 	"encoding/json"
 	"fmt"
@@ -19,7 +19,7 @@ func (t *trader) processAlgo(candle models.OHLCV) (*Action, error) {
 	candleLog, _ := json.Marshal(candle)
 	t.log.Info("trader: new candle has been processed", zap.Int("total_length", len(t.state.ohlcv)), zap.String("candle", string(candleLog)))
 
-	appliedOHLCV := t.strategy.ApplyIndicators(t.state.ohlcv, *t.strategyParams)
+	appliedOHLCV := t.strategy.ApplyIndicators(t.state.ohlcv, t.strategyEntity.Params)
 	if appliedOHLCV == nil {
 		t.log.Info("trader: not enough candles in the dataset")
 		return nil, nil
@@ -39,7 +39,7 @@ func (t *trader) BacktestAlgo(appliedOHLCV []models.AppliedOHLCV) (*Action, erro
 }
 
 func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
-	appliedOHLCV = t.strategy.ApplySignals(appliedOHLCV, *t.strategyParams)
+	appliedOHLCV = t.strategy.ApplySignals(appliedOHLCV, t.strategyEntity.Params)
 	if appliedOHLCV == nil {
 		return nil, nil
 	}
@@ -66,8 +66,8 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 		return nil, err
 	}
 
-	allowSell := lastOrder != nil && lastOrder.SideID == int64(order_model.OrderSideBuy) && lastOrder.StatusID == int64(order_model.OrderStatusFilled) && lastOrder.QuoteQty != nil
-	allowBuy := lastOrder == nil || (lastOrder.SideID == int64(order_model.OrderSideSell) && lastOrder.StatusID == int64(order_model.OrderStatusFilled) && lastOrder.QuoteQty != nil)
+	allowSell := lastOrder != nil && lastOrder.SideID == int64(orderModel.OrderSideBuy) && lastOrder.StatusID == int64(orderModel.OrderStatusFilled) && lastOrder.QuoteQty != nil
+	allowBuy := lastOrder == nil || (lastOrder.SideID == int64(orderModel.OrderSideSell) && lastOrder.StatusID == int64(orderModel.OrderStatusFilled) && lastOrder.QuoteQty != nil)
 
 	if allowBuy && allowSell {
 		t.log.Error("trade_algo: unexpected situation: allowed both buy and sell")

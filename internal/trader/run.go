@@ -18,15 +18,15 @@ import (
 	"time"
 )
 
-func (t *trader) Run(mode TradeMode, timeframe string) error {
-	if t.strategyParams == nil || t.state == nil || t.settings == nil {
+func (t *trader) Run(mode TradeMode) error {
+	if t.state == nil || t.settings == nil {
 		return fmt.Errorf("required fields are empty. Setup the trader first")
 	}
 	if mode != ModeLiveDemo {
 		return fmt.Errorf("unsupported trade mode")
 	}
-
-	timeframeSec := utils.TimeframeToMilliseconds(timeframe) / 1000
+	t.log.Info(fmt.Sprintf("timeframe %s", t.strategyEntity.TimeFrame))
+	timeframeSec := utils.TimeframeToMilliseconds(t.strategyEntity.TimeFrame) / 1000
 	candlesPerDay := (24 * 60 * 60) / int(timeframeSec)
 
 	totalCandles := 60 * candlesPerDay
@@ -93,10 +93,10 @@ func (t *trader) Run(mode TradeMode, timeframe string) error {
 		if t.candleRepo != nil {
 			symbol := strings.ReplaceAll(t.symbol, "/", "")
 			ctx := context.Background()
-			if err := t.candleRepo.Create(ctx, symbol, "bybit", timeframe, candle); err != nil {
+			if err := t.candleRepo.Create(ctx, symbol, "bybit", t.strategyEntity.TimeFrame, candle); err != nil {
 				t.log.Error("failed to save candle", zap.Error(err),
 					zap.String("symbol", symbol),
-					zap.String("timeframe", timeframe),
+					zap.String("timeframe", t.strategyEntity.TimeFrame),
 					zap.Int64("timestamp", candle.Timestamp))
 			}
 		}
@@ -123,14 +123,13 @@ func (t *trader) Run(mode TradeMode, timeframe string) error {
 	})
 
 	symbol := strings.ReplaceAll(t.symbol, "/", "")
-
-	_, _ = ws.Connect().SendSubscription([]string{fmt.Sprintf("kline.%s.%s", timeframe, symbol)})
+	_, _ = ws.Connect().SendSubscription([]string{fmt.Sprintf("kline.%s.%s", strconv.FormatInt(timeframeSec/60, 10), symbol)})
 
 	select {}
 }
 
 func (t *trader) RunSimulation(mode TradeMode) error {
-	if t.strategyParams == nil || t.state == nil || t.settings == nil {
+	if t.state == nil || t.settings == nil {
 		return fmt.Errorf("required fields are empty. Setup the trader first")
 	}
 	if mode != ModeSimulation {
@@ -149,7 +148,7 @@ func (t *trader) RunSimulation(mode TradeMode) error {
 
 	t.log.Info("connected to websocket", zap.String("url", wsUrl))
 
-	b, _ := json.MarshalIndent(t.strategyParams, "", "    ")
+	b, _ := json.MarshalIndent(t.strategyEntity.Params, "", "    ")
 	fmt.Printf("Use model:\n%+v\n", string(b))
 
 	// --------------------------------------------------------------
