@@ -41,7 +41,7 @@ func (u *orderUC) SyncOrders(ctx context.Context) {
 						u.log.Error("failed to update order status", zap.String("order_id", order.ExtID), zap.Error(err))
 						continue
 					}
-					if int(exchangeStatus) == int(order_model.OrderStatusFilled) {
+					if int64(exchangeStatus) == int64(order_model.OrderStatusFilled) {
 						u.log.Info(fmt.Sprintf("ORDER FILLED %s", order.ExtID))
 						quoteQty, err := u.ex.GetOrderQuoteQty(order.ExtID)
 						if err != nil {
@@ -55,6 +55,19 @@ func (u *orderUC) SyncOrders(ctx context.Context) {
 						}
 					}
 
+				}
+				if int64(exchangeStatus) == int64(order_model.OrderStatusFilled) && order.QuoteQty == nil {
+					u.log.Info(fmt.Sprintf("ORDER MISSED FILLED %s", order.ExtID))
+					quoteQty, err := u.ex.GetOrderQuoteQty(order.ExtID)
+					if err != nil {
+						u.log.Error("failed to update order quoteQty", zap.String("order_id", order.ExtID), zap.Error(err))
+						continue
+					}
+					err = u.repo.UpdateOrderQuoteQty(order.ID, quoteQty)
+					if err != nil {
+						u.log.Error("failed to update order quoteQty", zap.String("order_id", order.ExtID), zap.Error(err))
+						continue
+					}
 				}
 			}
 		}
