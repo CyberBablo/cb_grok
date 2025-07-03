@@ -1,40 +1,59 @@
 package config
 
-import (
-	"gopkg.in/yaml.v3"
-	"os"
-)
-
 type Config struct {
-	TelegramBot TelegramBot `yaml:"telegram_bot"`
-	Binance     Exchange    `yaml:"binance"`
+	App             AppConfig             `yaml:"app"`
+	Logger          LoggerConfig          `yaml:"logger"`
+	Telegram        TelegramConfig        `yaml:"telegram"`
+	Bybit           BybitConfig           `yaml:"bybit"`
+	Postgres        PostgresConfig        `yaml:"postgres"`
+	PostgresMetrics PostgresMetricsConfig `yaml:"postgres_metrics"`
+	DemoTrading     DemoTrading           `yaml:"demo_trading"`
 }
 
-type Exchange struct {
-	ProxyUrl  string `yaml:"proxy_url"`
-	IsDemo    bool   `yaml:"is_demo"`
-	ApiSecret string `yaml:"api_secret"`
-	ApuPublic string `yaml:"apu_public"`
+type DemoTrading struct {
+	Model string `json:"model"`
 }
 
-type TelegramBot struct {
-	Token  string `yaml:"token"`
-	ChatId int64  `yaml:"chat_id"`
+type AppConfig struct {
+	Name        string `yaml:"name"`
+	Version     string `yaml:"version"`
+	Environment string `yaml:"environment"`
 }
 
-func NewConfig() (Config, error) {
-	var cfg Config
+type LoggerConfig struct {
+	Level       string   `yaml:"level"`
+	Development bool     `yaml:"development"`
+	Encoding    string   `yaml:"encoding"` // json или console
+	OutputPaths []string `yaml:"output_paths"`
+}
 
-	file, err := os.Open("config/config.yml")
-	if err != nil {
-		return cfg, err
-	}
-	defer file.Close()
+type BybitConfig struct {
+	APIKey    string `yaml:"api_key"`
+	APISecret string `yaml:"api_secret"`
+}
 
-	decoder := yaml.NewDecoder(file)
-	if err := decoder.Decode(&cfg); err != nil {
-		return cfg, err
-	}
+type TelegramConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	Token   string `yaml:"token"`
+	ChatID  int64  `yaml:"chat_id"`
+}
 
-	return cfg, nil
+type PostgresConfig struct {
+	Host     string `yaml:"host"`
+	Port     string `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	DBName   string `yaml:"db_name"`
+	SSLMode  string `yaml:"ssl_mode"`
+	PgDriver string `yaml:"pg_driver"`
+}
+
+type PostgresMetricsConfig struct {
+	Host     string `yaml:"host"`
+	Port     string `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	DBName   string `yaml:"db_name"`
+	SSLMode  string `yaml:"ssl_mode"`
+	PgDriver string `yaml:"pg_driver"`
 }

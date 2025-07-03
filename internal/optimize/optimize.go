@@ -5,8 +5,9 @@ import (
 	"cb_grok/config"
 	"cb_grok/internal/backtest"
 	"cb_grok/internal/exchange"
-	"cb_grok/internal/model"
-	"cb_grok/internal/strategy"
+	"cb_grok/internal/exchange/bybit"
+	optimizeModel "cb_grok/internal/optimize/model"
+	strategyModel "cb_grok/internal/strategy/model"
 	"cb_grok/internal/telegram"
 	"cb_grok/internal/utils"
 	"context"
@@ -15,22 +16,23 @@ import (
 	"github.com/c-bata/goptuna"
 	"github.com/c-bata/goptuna/tpe"
 	"github.com/dnlo/struct2csv"
+	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"time"
 )
 
 type Optimize interface {
-	Run(params RunOptimizeParams) error
+	Run(params optimizeModel.RunOptimizeParams) error
 }
 type optimize struct {
 	log *zap.Logger
 	bt  backtest.Backtest
 	tg  *telegram.TelegramService
-	cfg config.Config
+	cfg *config.Config
 }
 
-func NewOptimize(log *zap.Logger, bt backtest.Backtest, tg *telegram.TelegramService, cfg config.Config) Optimize {
+func NewOptimize(log *zap.Logger, bt backtest.Backtest, tg *telegram.TelegramService, cfg *config.Config) Optimize {
 	return &optimize{
 		log: log,
 		bt:  bt,
@@ -39,8 +41,8 @@ func NewOptimize(log *zap.Logger, bt backtest.Backtest, tg *telegram.TelegramSer
 	}
 }
 
-func (o *optimize) Run(params RunOptimizeParams) error {
-	ex, err := exchange.NewBinance(false, o.cfg.Binance.ApuPublic, o.cfg.Binance.ApiSecret, o.cfg.Binance.ProxyUrl)
+func (o *optimize) Run(params optimizeModel.RunOptimizeParams) error {
+	ex, err := bybit.NewBybit("", "", "live")
 	if err != nil {
 		o.log.Error("optimize: initialize Binance exchange", zap.Error(err))
 		return err
@@ -52,7 +54,7 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 
 	candlesTotal := (params.ValSetDays + params.TrainSetDays) * candlesPerDay
 
-	candles, err := ex.FetchOHLCV(params.Symbol, params.Timeframe, candlesTotal)
+	candles, err := ex.FetchSpotOHLCV(params.Symbol, exchange.Timeframe(params.Timeframe), candlesTotal)
 
 	if err != nil {
 		o.log.Error("optimize: fetch ohlcv", zap.Error(err))
@@ -122,17 +124,14 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 		return err
 	}
 
-	var bestStrategyParams strategy.StrategyParams
+	var bestStrategyParams strategyModel.StrategyParams
 	err = json.Unmarshal(b, &bestStrategyParams)
 	if err != nil {
 		o.log.Error("optimize: best params marshal", zap.Error(err))
 		return err
 	}
 
-	valBTResult, err := o.bt.Run(valCandles, &model.Model{
-		Symbol:         params.Symbol,
-		StrategyParams: bestStrategyParams,
-	})
+	valBTResult, err := o.bt.Run(valCandles, bestStrategyParams)
 	if err != nil {
 		o.log.Error("optimize: final validation backtest", zap.Error(err))
 		return err
@@ -143,23 +142,17 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 		o.log.Info(fmt.Sprintf("Order: %v", order))
 	}
 
-	filename := model.Save(model.Model{
-		Symbol:         params.Symbol,
-		StrategyParams: bestStrategyParams,
-	})
-
 	orderCount := len(valBTResult.Orders)
 
 	o.log.Info("optimization completed",
 		zap.Float64("combined_sharpe_ratio", combinedSharpRatio),
 		zap.Float64("validation_sharpe_ratio", valBTResult.SharpeRatio),
 		zap.Float64("validation_max_drawdown", valBTResult.MaxDrawdown),
-		zap.Float64("validation_win_rate", valBTResult.WinRate),
-		zap.String("filename", filename))
+		zap.Float64("validation_win_rate", valBTResult.WinRate))
 
 	result := fmt.Sprintf(
-		"Символ: %s\nTrials: %d\nTimeframe: %s\nКоличество дней на валидации: %d\nКоличество сделок: %d\nCombined Sharpe Ratio: %.2f\nValidation Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\nМодель сохранена в %s",
-		params.Symbol, params.Trials, params.Timeframe, params.ValSetDays, orderCount, combinedSharpRatio, valBTResult.SharpeRatio, valBTResult.FinalCapital, valBTResult.MaxDrawdown, valBTResult.WinRate, filename)
+		"Символ: %s\nTrials: %d\nTimeframe: %s\nКоличество дней на валидации: %d\nКоличество сделок: %d\nCombined Sharpe Ratio: %.2f\nValidation Sharpe Ratio: %.2f\nИтоговый капитал: %.2f\nМаксимальная просадка: %.2f%%\nWin Rate: %.2f%%\n",
+		params.Symbol, params.Trials, params.Timeframe, params.ValSetDays, orderCount, combinedSharpRatio, valBTResult.SharpeRatio, valBTResult.FinalCapital, valBTResult.MaxDrawdown, valBTResult.WinRate)
 
 	buff := &bytes.Buffer{}
 	w := struct2csv.NewWriter(buff)
@@ -200,3 +193,7 @@ func (o *optimize) Run(params RunOptimizeParams) error {
 
 	return nil
 }
+
+var Module = fx.Module("optimize",
+	fx.Provide(NewOptimize),
+)

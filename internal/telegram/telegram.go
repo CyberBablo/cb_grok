@@ -6,7 +6,8 @@ import (
 	"errors"
 	"fmt"
 	tele "github.com/tucnak/telebot"
-	"log"
+	"go.uber.org/fx"
+	"go.uber.org/zap"
 	"os"
 	"strings"
 )
@@ -16,18 +17,18 @@ type TelegramService struct {
 	chatID int64
 }
 
-func NewTelegramService(cfg config.Config) (*TelegramService, error) {
+func NewTelegramService(cfg *config.Config) (*TelegramService, error) {
 	bot, err := tele.NewBot(tele.Settings{
-		Token: cfg.TelegramBot.Token,
+		Token: cfg.Telegram.Token,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	if cfg.TelegramBot.ChatId == 0 {
+	if cfg.Telegram.ChatID == 0 {
 		return nil, errors.New("chat ID not provided")
 	}
-	chatID := cfg.TelegramBot.ChatId
+	chatID := cfg.Telegram.ChatID
 
 	return &TelegramService{
 		bot:    bot,
@@ -39,25 +40,10 @@ func (s *TelegramService) SendMessage(text string) {
 	go func() {
 		_, err := s.bot.Send(&tele.Chat{ID: s.chatID}, text)
 		if err != nil {
-			log.Printf("telegram send error: %s\n", err.Error())
+			zap.L().Error("telegram send error", zap.Error(err))
 		}
 	}()
 }
-
-//func (s *TelegramService) SendFile(b *bytes.Buffer, text string) {
-//	go func() {
-//
-//		doc := &tele.Document{
-//			File:     tele.FromDisk(path),
-//			Caption:  text,
-//			FileName: "events.html"}
-//
-//		_, err := s.bot.Send(&tele.Chat{ID: s.chatID}, doc)
-//		if err != nil {
-//			log.Printf("telegram send error: %s\n", err.Error())
-//		}
-//	}()
-//}
 
 func (s *TelegramService) SendFile(b *bytes.Buffer, fileExtension string, text string) error {
 	// Validate input
@@ -93,9 +79,13 @@ func (s *TelegramService) SendFile(b *bytes.Buffer, fileExtension string, text s
 
 		_, err := s.bot.Send(&tele.Chat{ID: s.chatID}, doc)
 		if err != nil {
-			log.Printf("telegram send error: %s\n", err.Error())
+			zap.L().Error("telegram send error", zap.Error(err))
 		}
 	}()
 
 	return nil
 }
+
+var Module = fx.Module("telegram",
+	fx.Provide(NewTelegramService),
+)

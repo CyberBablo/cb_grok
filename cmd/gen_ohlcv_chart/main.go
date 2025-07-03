@@ -1,7 +1,7 @@
 package main
 
 import (
-	"cb_grok/internal/exchange"
+	"cb_grok/internal/exchange/bybit"
 	"cb_grok/internal/utils/logger"
 	"cb_grok/pkg/models"
 	"fmt"
@@ -15,15 +15,19 @@ import (
 )
 
 func main() {
-	log := logger.NewLogger()
-
-	ex, err := exchange.NewBinance(false, "", "", "")
+	log, _ := logger.NewZapLogger(logger.ZapConfig{
+		Level:       "info",
+		Development: true,
+		Encoding:    "console",
+		OutputPaths: []string{"stdout"},
+	})
+	ex, err := bybit.NewBybit("", "", "demo")
 	if err != nil {
 		log.Error("optimize: initialize Bybit exchange", zap.Error(err))
 		return
 	}
 
-	candles, err := ex.FetchOHLCV("BNB/USDT", "15m", 5760)
+	candles, err := ex.FetchSpotOHLCV("BNBUSDT", "15m", 1200)
 	if err != nil {
 		log.Error("optimize: fetch ohlcv", zap.Error(err))
 		return
@@ -35,7 +39,7 @@ func main() {
 	log.Info(fmt.Sprintf("Candles[0]: %+v", candles[0]))
 	log.Info(fmt.Sprintf("Candles[%d]: %+v", len(candles)-1, candles[len(candles)-1]))
 
-	//var appliedCandles []models.AppliedOHLCV
+	//var appliedCandles []model.AppliedOHLCV
 	//
 	//// 1) full apply
 	//strat := strategy.NewLinearBiasStrategy()
@@ -69,7 +73,9 @@ func klineChart(ohlcv []models.OHLCV) *charts.Kline {
 	var prices []float64
 	for i := 0; i < len(ohlcv); i++ {
 		x = append(x, time.UnixMilli(ohlcv[i].Timestamp).Format("2006-01-02 15:04"))
-		y = append(y, opts.KlineData{Value: []float64{ohlcv[i].Open, ohlcv[i].Close, ohlcv[i].Low, ohlcv[i].High}})
+
+		//fmt.Println(o, c, l, h)
+		y = append(y, opts.KlineData{Value: []float64{ohlcv[i].Close, ohlcv[i].Open, ohlcv[i].Low, ohlcv[i].High}})
 		prices = append(prices, ohlcv[i].Close)
 	}
 

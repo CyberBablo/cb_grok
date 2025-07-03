@@ -1,9 +1,58 @@
 package trader
 
 import (
+	"cb_grok/internal/exchange"
+	"cb_grok/internal/strategy"
+	strategyModel "cb_grok/internal/strategy/model"
+	traderModel "cb_grok/internal/trader/model"
 	"cb_grok/pkg/models"
 	"math"
 )
+
+type Params struct {
+	Symbol         string
+	Exchange       exchange.Exchange
+	Strategy       strategy.Strategy
+	Settings       *Settings
+	InitialCapital float64
+	StrategyModel  *strategyModel.Strategy
+	Model          *traderModel.Trader
+}
+
+type Settings struct {
+	Commission           float64
+	SlippagePercent      float64
+	Spread               float64
+	StopLossMultiplier   float64
+	TakeProfitMultiplier float64
+}
+
+type PortfolioValue struct {
+	Timestamp int64
+	Value     float64
+}
+
+type Action struct {
+	Timestamp       int64
+	Decision        TradeDecision
+	DecisionTrigger TradeDecisionTrigger
+	Price           float64
+	AssetAmount     float64
+	AssetCurrency   string
+	Comment         string
+	Profit          float64
+
+	PortfolioValue float64
+}
+
+type state struct {
+	initialCapital float64
+
+	ohlcv           []models.OHLCV
+	appliedOHLCV    []models.AppliedOHLCV
+	orders          []Action
+	portfolioValues []PortfolioValue
+}
 
 func (s *state) GetOrders() []Action {
 	return s.orders

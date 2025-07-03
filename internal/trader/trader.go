@@ -2,10 +2,13 @@ package trader
 
 import (
 	"bytes"
+	"cb_grok/internal/candle"
 	"cb_grok/internal/exchange"
-	"cb_grok/internal/model"
+	"cb_grok/internal/order"
 	"cb_grok/internal/strategy"
+	strategyModel "cb_grok/internal/strategy/model"
 	"cb_grok/internal/telegram"
+	traderModel "cb_grok/internal/trader/model"
 	"cb_grok/pkg/models"
 	"go.uber.org/zap"
 )
@@ -29,7 +32,7 @@ const (
 )
 
 var (
-	defaultSettings = TraderSettings{
+	defaultSettings = Settings{
 		Commission:           0.001,  // 0.1%
 		SlippagePercent:      0.001,  // 0.1%
 		Spread:               0.0002, // 0.02%
@@ -39,10 +42,12 @@ var (
 )
 
 type Trader interface {
-	Setup(params TraderParams)
+	Setup(params Params)
 	Run(mode TradeMode) error
+	RunSimulation(mode TradeMode) error
 	BacktestAlgo(appliedOHLCV []models.AppliedOHLCV) (*Action, error)
 	GetState() State
+	SetMetricsCollector(collector MetricsCollector)
 }
 
 type State interface {
@@ -55,40 +60,64 @@ type State interface {
 	CalculateSharpeRatio() float64
 	GetInitialCapital() float64
 	GetAppliedOHLCV() []models.AppliedOHLCV
-
 	GenerateCharts() (*bytes.Buffer, error)
 }
 
 type trader struct {
-	model    *model.Model
-	strategy strategy.Strategy
-	exch     exchange.Exchange
-	state    *state
-	settings *TraderSettings
+	model          *traderModel.Trader
+	strategyEntity *strategyModel.Strategy
+	strategy       strategy.Strategy
+	exch           exchange.Exchange
+	state          *state
+	settings       *Settings
+	symbol         string
+
+	orderUC    order.Order
+	candleRepo candle.Repository
 
 	tg  *telegram.TelegramService
 	log *zap.Logger
+
+	metricsCollector MetricsCollector
 }
 
-func NewTrader(log *zap.Logger, tg *telegram.TelegramService) Trader {
+type MetricsCollector interface {
+	SaveTradeMetric(order Action, indicators map[string]float64) error
+	SaveIndicatorData(timestamp int64, indicators map[string]float64) error
+	Close() error
+}
+
+func NewTrader(
+	log *zap.Logger,
+	tg *telegram.TelegramService,
+	orderUC order.Order,
+	candleRepo candle.Repository,
+) Trader {
 	return &trader{
-		log:      log,
-		tg:       tg,
-		settings: &defaultSettings,
+		log:        log,
+		tg:         tg,
+		settings:   &defaultSettings,
+		orderUC:    orderUC,
+		candleRepo: candleRepo,
 	}
 }
 
-func (t *trader) Setup(params TraderParams) {
-	t.model = params.Model
-
+func (t *trader) Setup(params Params) {
+	t.strategyEntity = params.StrategyModel
 	t.strategy = params.Strategy
-
+	t.model = params.Model
 	t.exch = params.Exchange
+	t.symbol = params.Symbol
+	t.orderUC.Init(params.Exchange)
 
 	t.state = t.initState(params.InitialCapital)
 	if params.Settings != nil {
 		t.settings = params.Settings
 	}
+}
+
+func (t *trader) SetMetricsCollector(collector MetricsCollector) {
+	t.metricsCollector = collector
 }
 
 func (t *trader) GetState() State {
@@ -101,6 +130,5 @@ func (t *trader) GetState() State {
 func (t *trader) initState(initialCapital float64) *state {
 	return &state{
 		initialCapital: initialCapital,
-		cash:           initialCapital,
 	}
 }

@@ -1,18 +1,21 @@
 package backtest
 
 import (
+	"cb_grok/internal/candle"
 	"cb_grok/internal/exchange"
-	"cb_grok/internal/model"
+	"cb_grok/internal/order"
 	"cb_grok/internal/strategy"
+	strategyModel "cb_grok/internal/strategy/model"
 	"cb_grok/internal/telegram"
 	"cb_grok/internal/trader"
 	"cb_grok/pkg/models"
 	"fmt"
+	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
 type Backtest interface {
-	Run(candles []models.OHLCV, mod *model.Model) (*BacktestResult, error)
+	Run(candles []models.OHLCV, params strategyModel.StrategyParams) (*BacktestResult, error)
 }
 
 type backtest struct {
@@ -25,9 +28,12 @@ type backtest struct {
 
 	tg  *telegram.TelegramService
 	log *zap.Logger
+
+	orderUC    order.Order
+	candleRepo candle.Repository
 }
 
-func NewBacktest(log *zap.Logger, tg *telegram.TelegramService) Backtest {
+func NewBacktest(log *zap.Logger, tg *telegram.TelegramService, orderUC order.Order, candleRepo candle.Repository) Backtest {
 	return &backtest{
 		InitialCapital:       10000.0,
 		Commission:           0.001,  // 0.1%
@@ -36,20 +42,22 @@ func NewBacktest(log *zap.Logger, tg *telegram.TelegramService) Backtest {
 		StopLossMultiplier:   5,
 		TakeProfitMultiplier: 30,
 
-		tg:  tg,
-		log: log,
+		tg:         tg,
+		log:        log,
+		orderUC:    orderUC,
+		candleRepo: candleRepo,
 	}
 }
 
-func (b *backtest) Run(ohlcv []models.OHLCV, mod *model.Model) (*BacktestResult, error) {
+func (b *backtest) Run(ohlcv []models.OHLCV, params strategyModel.StrategyParams) (*BacktestResult, error) {
 	str := strategy.NewLinearBiasStrategy()
 
-	trade := trader.NewTrader(b.log, b.tg)
-	trade.Setup(trader.TraderParams{
-		Model:    mod,
-		Exchange: exchange.NewMockExchange(),
-		Strategy: str,
-		Settings: &trader.TraderSettings{
+	trade := trader.NewTrader(b.log, b.tg, b.orderUC, b.candleRepo)
+	trade.Setup(trader.Params{
+		StrategyParams: params,
+		Exchange:       exchange.NewMockExchange(),
+		Strategy:       str,
+		Settings: &trader.Settings{
 			Commission:           b.Commission,
 			SlippagePercent:      b.SlippagePercent,
 			Spread:               b.Spread,
@@ -59,7 +67,7 @@ func (b *backtest) Run(ohlcv []models.OHLCV, mod *model.Model) (*BacktestResult,
 		InitialCapital: b.InitialCapital,
 	})
 
-	appliedCandles := str.ApplyIndicators(ohlcv, mod.StrategyParams)
+	appliedCandles := str.ApplyIndicators(ohlcv, params)
 	if appliedCandles == nil {
 		return nil, fmt.Errorf("no candles after strategy apply")
 	}
@@ -97,3 +105,7 @@ func (b *backtest) Run(ohlcv []models.OHLCV, mod *model.Model) (*BacktestResult,
 		TradeState:   tradeState,
 	}, nil
 }
+
+var Module = fx.Module("backtest",
+	fx.Provide(NewBacktest),
+)

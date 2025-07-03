@@ -1,6 +1,8 @@
 package backtest
 
-import "cb_grok/internal/trader"
+import (
+	"cb_grok/internal/trader"
+)
 
 type BacktestResult struct {
 	SharpeRatio  float64
