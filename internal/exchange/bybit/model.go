@@ -41,6 +41,7 @@ type Order struct {
 	UpdatedTime  string `json:"updatedTime"`
 	CumExecQty   string `json:"cumExecQty"`
 	CumExecValue string `json:"cumExecValue"`
+	CumExecFee   string `json:"cumExecFee"`
 }
 
 type WalletBalanceList struct {

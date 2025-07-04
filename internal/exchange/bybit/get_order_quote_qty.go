@@ -15,7 +15,6 @@ func (b *bybit) GetOrderQuoteQty(orderId string) (float64, error) {
 		b.logger.Error("failed to get order info", zap.String("orderId", orderId), zap.Error(err))
 		return 0, err
 	}
-	fmt.Println("Response order quote", response)
 	result, err := ParseResponse(response)
 	if err != nil {
 		return 0, err
@@ -26,6 +25,8 @@ func (b *bybit) GetOrderQuoteQty(orderId string) (float64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("failed to marshal response: %w", err)
 	}
+	fmt.Println(result)
+	//os.Exit(0)
 	err = json.Unmarshal(resultBytes, &orderList)
 	if err != nil {
 		return 0, fmt.Errorf("failed to unmarshal response: %w", err)
@@ -46,9 +47,16 @@ func (b *bybit) GetOrderQuoteQty(orderId string) (float64, error) {
 	} else {
 		amount, err = strconv.ParseFloat(ord.CumExecQty, 64)
 	}
+
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse amount of exec %s: %w", orderId, err)
 	}
 
-	return amount, nil
+	commission, err := strconv.ParseFloat(ord.CumExecFee, 64)
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse fee of exec %s: %w", orderId, err)
+	}
+
+	return amount - commission, nil
 }
