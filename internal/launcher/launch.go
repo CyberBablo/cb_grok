@@ -7,7 +7,7 @@ import (
 	"cb_grok/internal/exchange/bybit"
 	"cb_grok/internal/metrics"
 	"cb_grok/internal/order"
-	stage_model "cb_grok/internal/stage/model"
+	stageModel "cb_grok/internal/stage/model"
 	"cb_grok/internal/strategy"
 	"cb_grok/internal/symbol"
 	"cb_grok/internal/telegram"
@@ -18,7 +18,7 @@ import (
 )
 
 func Launch(
-	traderStage stage_model.StageStatus,
+	traderStage stageModel.StageStatus,
 	log *zap.Logger,
 	tg *telegram.TelegramService,
 	cfg *config.Config,
@@ -45,7 +45,7 @@ func Launch(
 		var activeExchange exchange.Exchange
 
 		switch traderStage {
-		case stage_model.StageDemo:
+		case stageModel.StageDemo:
 			activeExchange, err = bybit.NewBybit(cfg.Bybit.APIKey, cfg.Bybit.APISecret, exchange.TradingModeDemo)
 		default:
 			activeExchange = exchange.NewMockExchange()
@@ -59,7 +59,7 @@ func Launch(
 			log.Error("Failed to load active symbol", zap.Error(err))
 		}
 		newTrader.Setup(trader.Params{
-			Symbol:         activeSymbol.Code,
+			Symbol:         *activeSymbol,
 			StrategyModel:  activeStrategy,
 			Exchange:       activeExchange,
 			Strategy:       strategy.NewLinearBiasStrategy(),
@@ -70,7 +70,7 @@ func Launch(
 		activeMetricCollector := metrics.NewDBMetricsCollector(newTrader.GetState(), metricsDB, activeSymbol.Code, log)
 		newTrader.SetMetricsCollector(activeMetricCollector)
 		fmt.Println("TRADER RUN", activeTrader.ID)
-		if traderStage == stage_model.StageDemo {
+		if traderStage == stageModel.StageDemo {
 			go func() {
 				err := newTrader.Run(trader.ModeLiveDemo)
 				if err != nil {

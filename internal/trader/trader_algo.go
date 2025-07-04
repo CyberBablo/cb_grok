@@ -139,7 +139,7 @@ func (t *trader) algo(appliedOHLCV []models.AppliedOHLCV) (*Action, error) {
 		DecisionTrigger: decisionTrigger,
 		Price:           currentPrice,
 		AssetAmount:     transactionAmount,
-		AssetCurrency:   strings.Split(t.symbol, "/")[0],
+		AssetCurrency:   strings.Split(t.symbol.Code, "/")[0],
 		Comment:         "",
 		PortfolioValue:  portfolioValue,
 	}

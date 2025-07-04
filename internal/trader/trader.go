@@ -7,6 +7,7 @@ import (
 	"cb_grok/internal/order"
 	"cb_grok/internal/strategy"
 	strategyModel "cb_grok/internal/strategy/model"
+	symbolModel "cb_grok/internal/symbol/model"
 	"cb_grok/internal/telegram"
 	traderModel "cb_grok/internal/trader/model"
 	"cb_grok/pkg/models"
@@ -70,7 +71,7 @@ type trader struct {
 	exch           exchange.Exchange
 	state          *state
 	settings       *Settings
-	symbol         string
+	symbol         symbolModel.Symbol
 
 	orderUC    order.Order
 	candleRepo candle.Repository

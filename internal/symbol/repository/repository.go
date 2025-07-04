@@ -15,7 +15,7 @@ type repo struct {
 func (r repo) GetSymbolByID(id int64) (*symbol_model.Symbol, error) {
 	var result []*symbol_model.Symbol
 	query := `
-		SELECT id, code, prod_id, base, quote
+		SELECT id, code, prod_id, base, quote, decimals
 		FROM public.symbol 
 		WHERE id = $1
 	`

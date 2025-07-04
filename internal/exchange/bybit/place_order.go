@@ -6,13 +6,13 @@ import (
 	"fmt"
 )
 
-func (b *bybit) PlaceSpotMarketOrder(symbol string, orderSide exchange.OrderSide, baseQty float64, takeProfit *float64, stopLoss *float64) (string, error) {
+func (b *bybit) PlaceSpotMarketOrder(symbol string, orderSide exchange.OrderSide, baseQty float64, takeProfit *float64, stopLoss *float64, precision int64) (string, error) {
 	orderSideValue := GetBybitOrderSide(orderSide)
 	if orderSideValue == "" {
 		return "", fmt.Errorf("unsupported order side: %s", orderSide)
 	}
 
-	qty := fmt.Sprintf("%.6f", baseQty)
+	qty := fmt.Sprintf("%.*f", precision, baseQty)
 
 	req := b.client.NewPlaceOrderService("spot", symbol, orderSideValue, "Market", qty)
 

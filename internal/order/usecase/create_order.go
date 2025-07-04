@@ -3,13 +3,14 @@ package usecase
 import (
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/order/model"
+	symbolModel "cb_grok/internal/symbol/model"
 	"errors"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 	"time"
 )
 
-func (u *orderUC) CreateSpotMarketOrder(symbol string, side exchange.OrderSide, baseQty float64, takeProfit *float64, stopLoss *float64, traderID int64) error {
+func (u *orderUC) CreateSpotMarketOrder(symbol symbolModel.Symbol, side exchange.OrderSide, baseQty float64, takeProfit *float64, stopLoss *float64, traderID int64) error {
 	if u.ex == nil {
 		return errors.New("exchange not set")
 	}
@@ -25,7 +26,7 @@ func (u *orderUC) CreateSpotMarketOrder(symbol string, side exchange.OrderSide, 
 		sideId = int64(2)
 	}
 
-	symbolValue, err := u.repo.GetSymbolByCode(symbol)
+	symbolValue, err := u.repo.GetSymbolByCode(symbol.Code)
 	if err != nil {
 		u.log.Error("failed to get symbol by code", zap.Error(err))
 		return err
@@ -52,7 +53,7 @@ func (u *orderUC) CreateSpotMarketOrder(symbol string, side exchange.OrderSide, 
 		return err
 	}
 
-	orderId, err := u.ex.PlaceSpotMarketOrder(symbol, side, baseQty, nil, nil)
+	orderId, err := u.ex.PlaceSpotMarketOrder(symbol.Code, side, baseQty, nil, nil, symbol.Decimals)
 	if err != nil {
 		u.log.Error("create order failed", zap.Error(err))
 		return err

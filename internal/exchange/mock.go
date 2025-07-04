@@ -27,7 +27,7 @@ func (m *mock) FetchSpotOHLCV(symbol string, timeframe Timeframe, total int) ([]
 		},
 	}, nil
 }
-func (m *mock) PlaceSpotMarketOrder(symbol string, orderSide OrderSide, baseQty float64, takeProfit *float64, stopLoss *float64) (string, error) {
+func (m *mock) PlaceSpotMarketOrder(symbol string, orderSide OrderSide, baseQty float64, takeProfit *float64, stopLoss *float64, precision int64) (string, error) {
 	return "mock-order-id", nil
 }
 func (m *mock) GetOrderStatus(orderId string) (order_model.OrderStatus, error) {

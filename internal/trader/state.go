@@ -4,13 +4,14 @@ import (
 	"cb_grok/internal/exchange"
 	"cb_grok/internal/strategy"
 	strategyModel "cb_grok/internal/strategy/model"
+	symbolModel "cb_grok/internal/symbol/model"
 	traderModel "cb_grok/internal/trader/model"
 	"cb_grok/pkg/models"
 	"math"
 )
 
 type Params struct {
-	Symbol         string
+	Symbol         symbolModel.Symbol
 	Exchange       exchange.Exchange
 	Strategy       strategy.Strategy
 	Settings       *Settings

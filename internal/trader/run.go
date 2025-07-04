@@ -31,7 +31,7 @@ func (t *trader) Run(mode TradeMode) error {
 
 	totalCandles := 60 * candlesPerDay
 
-	candles, err := t.exch.FetchSpotOHLCV(t.symbol, exchange.Timeframe1h, totalCandles)
+	candles, err := t.exch.FetchSpotOHLCV(t.symbol.Code, exchange.Timeframe1h, totalCandles)
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func (t *trader) Run(mode TradeMode) error {
 
 		// Save candle to database if repository is available
 		if t.candleRepo != nil {
-			symbol := strings.ReplaceAll(t.symbol, "/", "")
+			symbol := strings.ReplaceAll(t.symbol.Code, "/", "")
 			ctx := context.Background()
 			if err := t.candleRepo.Create(ctx, symbol, "bybit", t.strategyEntity.TimeFrame, candle); err != nil {
 				t.log.Error("failed to save candle", zap.Error(err),
@@ -122,7 +122,7 @@ func (t *trader) Run(mode TradeMode) error {
 		return nil
 	})
 
-	symbol := strings.ReplaceAll(t.symbol, "/", "")
+	symbol := strings.ReplaceAll(t.symbol.Code, "/", "")
 	_, _ = ws.Connect().SendSubscription([]string{fmt.Sprintf("kline.%s.%s", strconv.FormatInt(timeframeSec/60, 10), symbol)})
 
 	select {}
@@ -176,7 +176,7 @@ func (t *trader) RunSimulation(mode TradeMode) error {
 
 		// Save candle to database if repository is available (simulation mode)
 		if t.candleRepo != nil {
-			symbol := strings.ReplaceAll(t.symbol, "/", "")
+			symbol := strings.ReplaceAll(t.symbol.Code, "/", "")
 			ctx := context.Background()
 			// For simulation, we use "simulation" as exchange name
 			if err := t.candleRepo.Create(ctx, symbol, "simulation", "1m", candle); err != nil {
