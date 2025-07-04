@@ -13,6 +13,7 @@ func (b *bybit) PlaceSpotMarketOrder(symbol string, orderSide exchange.OrderSide
 	}
 
 	qty := fmt.Sprintf("%.*f", precision, baseQty)
+	fmt.Println("qty:", baseQty, qty, precision)
 
 	req := b.client.NewPlaceOrderService("spot", symbol, orderSideValue, "Market", qty)
 
